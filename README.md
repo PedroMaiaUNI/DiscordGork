@@ -14,7 +14,9 @@ Tenha em mente que esse projeto foi feito apenas para entretenimento, e boa part
 
 - 🎲 Responde automaticamente com frases ao ser mencionado
 - ➕ `!addfrase` – Adiciona nova frase ao Gist
+- 📜 `!listfrases "frase"` – Lista uma frase especifica armazenada no Gist
 - 📜 `!listfrases [n]` – Lista as últimas frases (sem links), padrão: 10
+- 📜 `!listfrases @[username]` – Lista as últimas frases de um autor específico
 - ❌ `!rmfrase` – Remove uma frase exata
 - ⏰ Envia mensagens automáticas a cada N mensagens no servidor
 - 🔁 Atualiza frases do Gist periodicamente

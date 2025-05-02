@@ -122,38 +122,65 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  //comando !listfrases
   if (message.content.startsWith('!listfrases')) {
     if (respostas.length === 0) {
       return message.reply('⚠️ Nenhuma frase cadastrada ainda.');
     }
-
-    // Extrai argumento opcional: !listfrases 5
-    const partes = message.content.trim().split(' ');
-    let quantidade = parseInt(partes[1]);
-
-    if (isNaN(quantidade) || quantidade <= 0) {
-      quantidade = 10; // valor padrão
+  
+    const args = message.content.trim().split(' ').slice(1);
+    const termo = args.join(' ').trim();
+  
+    // 🔍 Buscar frase exata ou trecho de frase
+    if (termo && !termo.match(/^\d+$/) && !termo.includes('#') && !termo.startsWith('<@')) {
+      const encontrada = respostas.find(f => f.texto.toLowerCase().includes(termo.toLowerCase()));
+      if (encontrada) {
+        return message.reply(`🧾 Frase encontrada:\n"${encontrada.texto}"\n👤 Autor: ${encontrada.autor}`);
+      } else {
+        return message.reply(`❌ Nenhuma frase contendo "${termo}" foi encontrada.`);
+      }
     }
-
-    // filtra links
+  
+    // 👤 Buscar por autor
+    if (termo.includes('#') || termo.startsWith('<@')) {
+      // Se for menção, extrai o username do objeto de usuário
+      const autorFiltro = termo.startsWith('<@')
+        ? message.mentions.users.first()?.tag
+        : termo;
+  
+      if (!autorFiltro) return message.reply('❌ Não foi possível identificar o autor.');
+  
+      const frasesAutor = respostas.filter(f => f.autor === autorFiltro);
+      if (frasesAutor.length === 0) {
+        return message.reply(`❌ Nenhuma frase encontrada para o autor ${autorFiltro}`);
+      }
+  
+      const listagem = frasesAutor.map((f, i) => `${i + 1}. ${f.texto}`).join('\n');
+      const respostaFinal = `📚 **Frases de ${autorFiltro}:**\n${listagem.slice(0, 1900)}`;
+      return message.reply(respostaFinal);
+    }
+  
+    // 🔟 Listar últimas N frases (sem links)
+    let quantidade = parseInt(termo);
+    if (isNaN(quantidade) || quantidade <= 0) quantidade = 10;
+  
     const semLinks = respostas.filter(f => !f.texto.match(/^https?:\/\/\S+/i));
-
     if (semLinks.length === 0) {
       return message.reply('⚠️ Todas as frases são links e foram ocultadas da listagem.');
     }
-
+  
     const ultimas = semLinks.slice(-quantidade);
     const listagem = ultimas.map((f, i) =>
       `${semLinks.length - ultimas.length + i + 1}. ${f.texto} (por ${f.autor})`
     ).join('\n');
-
+  
     if (listagem.length > 1900) {
       return message.reply('⚠️ Resultado muito longo. Tente um número menor (ex: `!listfrases 5`).');
     }
-
+  
     message.reply(`📜 **Últimas ${ultimas.length} frases (sem links):**\n${listagem}`);
     return;
-  }
+  }  
 
   // comando !rmfrase
   if (message.content.startsWith('!rmfrase')) {
