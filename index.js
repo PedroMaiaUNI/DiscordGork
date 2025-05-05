@@ -94,6 +94,12 @@ client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
   
+  // SE FOR DO COMUNICADOS, ELE NAO VAI MAIS RESPONDER.
+  if (message.channel.parentId === '919309359916388372') {
+    console.log(`Mensagem ignorada no canal ${message.channel.name} da categoria proibida.`);
+    return;
+  }
+  
   messageCount++;
   if (messageCount >= N) {
     messageCount = 0;
