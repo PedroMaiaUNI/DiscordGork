@@ -114,7 +114,7 @@ client.on("messageCreate", async (message) => {
       console.log('Falha ao reagir com emote:', e);
     }
   }
-  
+
   messageCount++;
   if (messageCount >= N) {
     messageCount = 0;
@@ -141,6 +141,14 @@ client.on("messageCreate", async (message) => {
     await atualizarGist(novas);
     message.reply('✅ Frase adicionada com sucesso!');
     return;
+  }
+
+  if(message.content.toLowerCase().includes("quando acaba o midiacast")) {
+    message.reply("09/08/2025 às 23:59");
+  }
+
+  if(message.content.toLowerCase().includes("qual o minimo")) {
+    message.react('🫃');
   }
 
   //comando !listfrases
