@@ -87,6 +87,12 @@ client.once('ready', async () => {
 
 client.on("ready", () => {
   console.log(`Bot está online como ${client.user.tag}`);
+  const guild = client.guilds.cache.get('918671270885851187'); // Tonga
+  
+  const emotesArray = [...guild.emojis.cache.map(e => e), '🫃'];
+  if (emotesArray) console.log("emotes obtidos");
+  global.emotesArray = emotesArray;
+  
 });
 
 
@@ -98,6 +104,15 @@ client.on("messageCreate", async (message) => {
   if (message.channel.parentId === '919309359916388372') {
     console.log(`Mensagem ignorada no canal ${message.channel.name} da categoria proibida.`);
     return;
+  }
+
+  if (global.emotesArray && Math.random() < 0.10) {
+    const emote = global.emotesArray[Math.floor(Math.random() * global.emotesArray.length)];
+    try {
+      await message.react(emote.id ? emote.id : emote); 
+    } catch (e) {
+      console.log('Falha ao reagir com emote:', e);
+    }
   }
   
   messageCount++;
