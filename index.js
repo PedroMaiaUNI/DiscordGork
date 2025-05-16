@@ -143,11 +143,22 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  if(message.content.toLowerCase().includes("quando acaba o midiacast")) {
+  // Função utilitária para remover acentos
+  function removerAcentos(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  const conteudo = removerAcentos(message.content.toLowerCase());
+
+  // Verifica se todas as palavras-chave estão presentes
+  if (
+    conteudo.includes("acaba") &&
+    conteudo.includes("midiacast")
+  ) {
     message.reply("09/08/2025 às 23:59");
   }
 
-  if(message.content.toLowerCase().includes("qual o minimo")) {
+  if (conteudo.includes("qual o minimo")) {
     message.react('🫃');
   }
 
