@@ -106,7 +106,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  if (global.emotesArray && Math.random() < 0.10) {
+  if (global.emotesArray && Math.random() < 0.005) {
     const emote = global.emotesArray[Math.floor(Math.random() * global.emotesArray.length)];
     try {
       await message.react(emote.id ? emote.id : emote); 
