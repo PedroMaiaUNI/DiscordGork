@@ -162,6 +162,18 @@ client.on("messageCreate", async (message) => {
     message.react('🫃');
   }
 
+  if (conteudo.includes("is this true")) {
+    if(Math.random() < 0.45){
+      message.reply('https://tenor.com/view/morgan-freeman-true-morgan-freeman-true-nodding-gif-13973817878387504960');
+    }else if(Math.random() < 0.95){
+      message.reply('https://tenor.com/view/its-peak-its-mid-fight-morgan-freeman-gif-6564041502742593422');
+    }else{
+      message.reply('https://cdn.discordapp.com/attachments/1362454934997696642/1374740964790243399/images373.jpg?ex=682f26cb&is=682dd54b&hm=b6230e85ddd3e2ce9eb9c2bfd8dbab0d3936cac158462cac60f06a9f7fe149ca&');
+    }
+    return;
+  }
+  
+
   //comando !listfrases
   if (message.content.startsWith('!listfrases')) {
     if (respostas.length === 0) {
