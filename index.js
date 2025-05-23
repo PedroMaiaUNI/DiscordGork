@@ -45,7 +45,6 @@ async function carregarRespostas() {
   try {
     respostas = JSON.parse(data.files[GIST_FILENAME].content);
     console.log('✅ Frases carregadas do Gist');
-    console.log(respostas)
   } catch (e) {
     console.error('❌ Erro ao ler conteúdo JSON do Gist:', e);
   }
