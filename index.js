@@ -260,53 +260,85 @@ client.on("messageCreate", async (message) => {
     message.reply(resposta);
   }
 
-  if (message.content.startsWith('!gozei')) {
-    // Só permite se o autor tiver permissão de gerenciar mensagens
-    if (!message.member.permissions.has('ManageMessages')) {
-      return message.reply('❌ Você não tem permissão para usar este comando.');
+  let ultimoGozado = null;
+
+  // Função para embaralhar um array (Fisher-Yates)
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
     }
-
-    const guild = message.guild;
-    let galaRole = guild.roles.cache.find(role => role.name === 'gozado');
-
-    // Seleciona um membro aleatório que não seja bot
-    let members = guild.members.cache.filter(m => !m.user.bot);
-    if (members.size === 0) return message.reply('Não há membros humanos no servidor!');
-    let victim = members.random();
-
-    // Cria o cargo se não existir
-    if (!galaRole) {
-      await message.channel.send('Criando cargo...');
-      galaRole = await guild.roles.create({ name: 'gozado', color: 0xFFFFFF });
-    }
-
-    // Adiciona o cargo ao membro sorteado
-    await victim.roles.add(galaRole);
-
-    await message.channel.send(`gozei no ${victim.toString()}`);
+    return array;
   }
-  
+
+  if (message.content.startsWith('!gozei')) {
+    try {
+      if (!message.member.permissions.has('ManageMessages')) {
+        return message.reply('❌ Você não tem permissão para usar este comando.');
+      }
+
+      const guild = message.guild;
+      let galaRole = guild.roles.cache.find(role => role.name === 'gozado');
+
+      let members = guild.members.cache.filter(m => !m.user.bot);
+      if (members.size === 0) return message.reply('Não há membros humanos no servidor!');
+
+      // Remove o último sorteado da lista, se possível
+      let pool = members;
+      if (ultimoGozado && members.has(ultimoGozado)) {
+        pool = members.filter(m => m.id !== ultimoGozado);
+        if (pool.size === 0) pool = members;
+      }
+
+      // Embaralha o pool e pega o primeiro
+      const shuffled = shuffle(Array.from(pool.values()));
+      let victim = shuffled[0];
+
+      if (!galaRole) {
+        await message.channel.send('Criando cargo...');
+        galaRole = await guild.roles.create({ name: 'gozado', color: 0xFFFFFF });
+      }
+
+      for (const [_, membro] of galaRole.members) {
+        await membro.roles.remove(galaRole);
+      }
+
+      await victim.roles.add(galaRole);
+      ultimoGozado = victim.id;
+
+      await message.channel.send(`gozei no ${victim.toString()}`);
+    } catch (error) {
+      console.error('Erro no comando !gozei:', error);
+      message.reply('❌ Ocorreu um erro ao executar o comando !gozei.');
+    }
+  }
+
   if (message.content.startsWith('!limpagala')) {
-    // Só permite se o autor tiver permissão de gerenciar mensagens
-    if (!message.member.permissions.has('ManageMessages')) {
-      return message.reply('❌ Você não tem permissão para usar este comando.');
-    }
+    try {
+      // Só permite se o autor tiver permissão de gerenciar mensagens
+      if (!message.member.permissions.has('ManageMessages')) {
+        return message.reply('❌ Você não tem permissão para usar este comando.');
+      }
 
-    const guild = message.guild;
-    const galaRole = guild.roles.cache.find(role => role.name === 'gozado');
-    if (!galaRole) {
-      return message.reply('O cargo "gozado" não existe.');
-    }
+      const guild = message.guild;
+      const galaRole = guild.roles.cache.find(role => role.name === 'gozado');
+      if (!galaRole) {
+        return message.reply('O cargo "gozado" não existe.');
+      }
 
-    const membros = galaRole.members;
-    if (membros.size === 0) {
-      return message.reply('Não tem ninguém melado.');
-    }
+      const membros = galaRole.members;
+      if (membros.size === 0) {
+        return message.reply('Não tem ninguém melado.');
+      }
 
-    for (const [_, membro] of membros) {
-      await membro.roles.remove(galaRole);
+      for (const [_, membro] of membros) {
+        await membro.roles.remove(galaRole);
+      }
+      await message.channel.send('Todo mundo limpinho.');
+    } catch (error) {
+      console.error('Erro no comando !limpagala:', error);
+      message.reply('❌ Ocorreu um erro ao executar o comando !limpagala.');
     }
-    await message.channel.send('Todo mundo limpinho.');
   }
 });
 
