@@ -259,6 +259,55 @@ client.on("messageCreate", async (message) => {
     const resposta = random.texto;
     message.reply(resposta);
   }
+
+  if (message.content.startsWith('!gozei')) {
+    // Só permite se o autor tiver permissão de gerenciar mensagens
+    if (!message.member.permissions.has('ManageMessages')) {
+      return message.reply('❌ Você não tem permissão para usar este comando.');
+    }
+
+    const guild = message.guild;
+    let galaRole = guild.roles.cache.find(role => role.name === 'gozado');
+
+    // Seleciona um membro aleatório que não seja bot
+    let members = guild.members.cache.filter(m => !m.user.bot);
+    if (members.size === 0) return message.reply('Não há membros humanos no servidor!');
+    let victim = members.random();
+
+    // Cria o cargo se não existir
+    if (!galaRole) {
+      await message.channel.send('Criando cargo...');
+      galaRole = await guild.roles.create({ name: 'gozado', color: 0xFFFFFF });
+    }
+
+    // Adiciona o cargo ao membro sorteado
+    await victim.roles.add(galaRole);
+
+    await message.channel.send(`gozei no ${victim.toString()}`);
+  }
+  
+  if (message.content.startsWith('!limpagala')) {
+    // Só permite se o autor tiver permissão de gerenciar mensagens
+    if (!message.member.permissions.has('ManageMessages')) {
+      return message.reply('❌ Você não tem permissão para usar este comando.');
+    }
+
+    const guild = message.guild;
+    const galaRole = guild.roles.cache.find(role => role.name === 'gozado');
+    if (!galaRole) {
+      return message.reply('O cargo "gozado" não existe.');
+    }
+
+    const membros = galaRole.members;
+    if (membros.size === 0) {
+      return message.reply('Não tem ninguém melado.');
+    }
+
+    for (const [_, membro] of membros) {
+      await membro.roles.remove(galaRole);
+    }
+    await message.channel.send('Todo mundo limpinho.');
+  }
 });
 
 client.login(TOKEN);
