@@ -334,11 +334,11 @@ client.on("messageCreate", async (message) => {
 });
 
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
-cron.schedule('0 13 * * 5', async () => {
+cron.schedule('40 14 * * 5', async () => {
   if (imagensSexta.length === 0) return;
   const sorteada = imagensSexta[Math.floor(Math.random() * imagensSexta.length)];
   try {
-    const canal = await client.channels.fetch('919309611885015140'); // Troque pelo ID do canal desejado
+    const canal = await client.channels.fetch('919309611885015140'); 
     if (canal) {
       await canal.send({ content: 'Imagem da sexta-feira:', files: [sorteada] });
     }
