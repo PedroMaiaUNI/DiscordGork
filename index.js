@@ -334,7 +334,7 @@ client.on("messageCreate", async (message) => {
 });
 
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
-cron.schedule('40 14 * * 5', async () => {
+cron.schedule('30 15 * * 5', async () => {
   if (imagensSexta.length === 0) return;
   const sorteada = imagensSexta[Math.floor(Math.random() * imagensSexta.length)];
   try {
