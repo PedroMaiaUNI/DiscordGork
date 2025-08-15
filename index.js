@@ -123,12 +123,7 @@ client.on("messageCreate", async (message) => {
     }
     return;
   }
-
-  // Ignora mensagens de uma categoria específica
-  if (message.channel.parentId === '919309359916388372') {
-    console.log(`Mensagem ignorada no canal ${message.channel.name} da categoria proibida.`);
-    return;
-  }
+  
 
   // Reage com emote aleatório
   if (global.emotesArray && Math.random() < 0.005) {
