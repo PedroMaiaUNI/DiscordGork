@@ -331,6 +331,19 @@ client.on("messageCreate", async (message) => {
       message.reply('❌ Ocorreu um erro ao executar o comando !limpagala.');
     }
   }
+
+  if (message.content.startsWith('!leite')) {
+  await message.Channel.send(`**LEITE
+  ingredientes
+  meu pau
+
+  ferramentas
+  sua mão
+
+  instruções
+  1. bate uma pra mim**`);
+}
+
 });
 
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
