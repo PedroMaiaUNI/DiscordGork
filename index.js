@@ -333,7 +333,7 @@ client.on("messageCreate", async (message) => {
   }
 
   if (message.content.startsWith('!leite')) {
-  await message.Channel.send(`**LEITE
+  await message.channel.send(`**LEITE
   ingredientes
   meu pau
 
