@@ -157,8 +157,13 @@ client.on("messageCreate", async (message) => {
   messageCount++;
   if (messageCount >= N) {
     messageCount = 0;
-    const autoMsg = respostas[Math.floor(Math.random() * respostas.length)];
-    message.channel.send(autoMsg.texto);
+    let texto;
+    if (Math.random() < 0.5 && respostas.length > 0) {
+      texto = respostas[Math.floor(Math.random() * respostas.length)].texto;
+    } else {
+      texto = markov.generate();
+    }
+    message.channel.send(texto);
   }
 
   // Comando para mencionar cargo CSGO
@@ -273,8 +278,13 @@ client.on("messageCreate", async (message) => {
 
   // --- Menciona o bot ---
   if (message.mentions.has(client.user) && !message.author.bot) {
-    const random = respostas[Math.floor(Math.random() * respostas.length)];
-    message.reply(random.texto);
+    let texto;
+    if (Math.random() < 0.5 && respostas.length > 0) {
+      texto = respostas[Math.floor(Math.random() * respostas.length)].texto;
+    } else {
+      texto = markov.generate();
+    }
+    message.reply(texto);
   }
 
   // --- Comando !gozei ---
