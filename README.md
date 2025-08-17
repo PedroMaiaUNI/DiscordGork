@@ -20,3 +20,4 @@ Tenha em mente que esse projeto foi feito apenas para entretenimento, e boa part
 - ❌ `!rmfrase` – Remove uma frase exata
 - ⏰ Envia mensagens automáticas a cada N mensagens no servidor
 - 🔁 Atualiza frases do Gist periodicamente
+- 🧠 Gera mensagens novas a partir de uma [Cadeia de Markov](https://pt.wikipedia.org/wiki/Cadeias_de_Markov), que armazena o conteudo enviado no servidor.
