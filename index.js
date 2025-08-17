@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs = require('fs');
 const cron = require('node-cron');
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const MarkovChain = require('./markov.js');
 
 const TOKEN = process.env.TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -12,6 +13,8 @@ const canalTeste = process.env.CANAL_TESTE;
 const cargoTeste = process.env.CARGO_TESTE;
 const cargoCSGO = process.env.CARGO_CSGO;
 const jogos = process.env.JOGOS;
+
+const markov = new MarkovChain();
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot está vivo!"));
@@ -107,6 +110,19 @@ client.on("ready", () => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  // Alimenta a cadeia de markov com as mensagens lidas
+  try {
+    markov.addMessage(message.content);
+  } catch (e) {
+    console.error('❌ Ocorreu um erro ao ler esta mensagem: ', e);
+  }
+
+  if (message.content.startsWith('!markov')) {
+  const resposta = markov.generate();
+  await message.channel.send(resposta);
+  return;
+  }
+  
   // Salva imagens recebidas por DM
   if (message.channel.type === 1 && message.attachments.size > 0) {
     try {
