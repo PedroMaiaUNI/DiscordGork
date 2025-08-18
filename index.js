@@ -198,7 +198,7 @@ client.on("messageCreate", async (message) => {
     (conteudo.includes("acaba") && conteudo.includes("midiacast")) ||
     (conteudo.includes("termina") && conteudo.includes("midiacast"))
   ) {
-    message.reply("09/08/2025 às 23:59");
+    message.reply("08/11/2025 as 23:59");
   }
   if (conteudo.includes("qual o minimo")) {
     message.react('🫃');
