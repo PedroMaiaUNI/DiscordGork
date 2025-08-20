@@ -277,14 +277,18 @@ client.on("messageCreate", async (message) => {
   }
 
   // --- Menciona o bot ---
-  if (message.mentions.has(client.user) && !message.author.bot) {
+ if (message.mentions.has(client.user) && !message.author.bot && !message.content.startsWith('!')) {
     let texto;
-    if (Math.random() < 0.5 && respostas.length > 0) {
-      texto = respostas[Math.floor(Math.random() * respostas.length)].texto;
-    } else {
-      texto = markov.generate();
+    try {
+      if (Math.random() < 0.5 && respostas.length > 0) {
+        texto = respostas[Math.floor(Math.random() * respostas.length)].texto;
+      } else {
+        texto = markov.generate();
+      }
+      message.reply(texto);
+    } catch(e) {
+        await message.send("erro ao responder essa mensagem.");
     }
-    message.reply(texto);
   }
 
   // --- Comando !gozei ---
