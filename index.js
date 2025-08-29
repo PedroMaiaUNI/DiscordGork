@@ -290,7 +290,7 @@ client.on("messageCreate", async (message) => {
         await message.send("erro ao responder essa mensagem.");
     }
   }
-
+  /*
   // --- Comando !gozei ---
   let ultimoGozado = null;
   function shuffle(array) {
@@ -330,7 +330,7 @@ client.on("messageCreate", async (message) => {
       console.error('Erro no comando !gozei:', error);
       message.reply('❌ Ocorreu um erro ao executar o comando !gozei.');
     }
-  }
+  } 
 
   // --- Comando !limpagala ---
   if (message.content.startsWith('!limpagala')) {
@@ -356,7 +356,7 @@ client.on("messageCreate", async (message) => {
       message.reply('❌ Ocorreu um erro ao executar o comando !limpagala.');
     }
   }
-
+*/
   if (message.content.startsWith('!leite')) {
   await message.channel.send(`**LEITE
   ingredientes
