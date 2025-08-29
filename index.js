@@ -16,6 +16,8 @@ const jogos = process.env.JOGOS;
 
 const markov = new MarkovChain();
 
+DO_NOT_DISTURB = [];
+
 const app = express();
 app.get("/", (req, res) => res.send("Bot está vivo!"));
 app.listen(3000, () => console.log("Servidor web rodando"));
@@ -290,7 +292,7 @@ client.on("messageCreate", async (message) => {
         await message.send("erro ao responder essa mensagem.");
     }
   }
-  /*
+  
   // --- Comando !gozei ---
   let ultimoGozado = null;
   function shuffle(array) {
@@ -307,7 +309,7 @@ client.on("messageCreate", async (message) => {
       }
       const guild = message.guild;
       let galaRole = guild.roles.cache.find(role => role.name === 'gozado');
-      let members = guild.members.cache.filter(m => !m.user.bot);
+      let members = guild.members.cache.filter(m => !m.user.bot && !DO_NOT_DISTURB.find(m));
       if (members.size === 0) return message.reply('Não há membros humanos no servidor!');
       let pool = members;
       if (ultimoGozado && members.has(ultimoGozado)) {
@@ -356,7 +358,17 @@ client.on("messageCreate", async (message) => {
       message.reply('❌ Ocorreu um erro ao executar o comando !limpagala.');
     }
   }
-*/
+
+  // --- Do not disturb momento ---
+  if (message.content.startsWith('!consent')) {
+    user = message.user.id;
+    if (!DO_NOT_DISTURB.find(user)) {
+      DO_NOT_DISTURB.push(user)
+    }
+    await message.react("👎");
+    await message.reply("Removido da diversão. BUUUXA")
+  }
+
   if (message.content.startsWith('!leite')) {
   await message.channel.send(`**LEITE
   ingredientes
