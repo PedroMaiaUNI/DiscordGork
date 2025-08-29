@@ -371,6 +371,7 @@ client.on("messageCreate", async (message) => {
 
 });
 
+/*
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
 cron.schedule('00 13 * * 5', async () => {
   if (imagensSexta.length === 0) return;
@@ -384,5 +385,5 @@ cron.schedule('00 13 * * 5', async () => {
     console.error('Erro ao enviar imagem da sexta:', e);
   }
 });
-
+*/
 client.login(TOKEN);
