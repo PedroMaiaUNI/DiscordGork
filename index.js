@@ -361,13 +361,17 @@ client.on("messageCreate", async (message) => {
 
   // --- Do not disturb momento ---
   if (message.content.startsWith('!consent')) {
-    user = message.user.id;
-    if (!DO_NOT_DISTURB.find(user)) {
-      DO_NOT_DISTURB.push(user)
+    const user = message.author.id;
+    // Verificando se o usuário já está na lista DO_NOT_DISTURB
+    if (!DO_NOT_DISTURB.includes(user)) {
+        DO_NOT_DISTURB.push(user);
+        await message.react("👎");
+        await message.reply("Removido da diversão. BUUUXA");
+    } else {
+        await message.reply("Você já foi removido da diversão.");
     }
-    await message.react("👎");
-    await message.reply("Removido da diversão. BUUUXA")
   }
+
 
   if (message.content.startsWith('!leite')) {
   await message.channel.send(`**LEITE
