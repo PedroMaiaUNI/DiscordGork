@@ -16,7 +16,28 @@ const jogos = process.env.JOGOS;
 
 const markov = new MarkovChain();
 
-DO_NOT_DISTURB = [];
+const DND_PATH = 'do_not_disturb.json';
+
+function carregarDoNotDisturb() {
+  try {
+    if (fs.existsSync(DND_PATH)) {
+      return JSON.parse(fs.readFileSync(DND_PATH, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Erro ao carregar DO_NOT_DISTURB:', e);
+  }
+  return [];
+}
+
+function salvarDoNotDisturb(lista) {
+  try {
+    fs.writeFileSync(DND_PATH, JSON.stringify(lista, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Erro ao salvar DO_NOT_DISTURB:', e);
+  }
+}
+
+let DO_NOT_DISTURB = carregarDoNotDisturb();
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot está vivo!"));
@@ -309,7 +330,9 @@ client.on("messageCreate", async (message) => {
       }
       const guild = message.guild;
       let galaRole = guild.roles.cache.find(role => role.name === 'gozado');
-      let members = guild.members.cache.filter(m => !m.user.bot && !DO_NOT_DISTURB.find(m));
+      let members = guild.members.cache.filter(m => 
+        !m.user.bot && !carregarDoNotDisturb().includes(m.id)
+      );
       if (members.size === 0) return message.reply('Não há membros humanos no servidor!');
       let pool = members;
       if (ultimoGozado && members.has(ultimoGozado)) {
@@ -362,13 +385,14 @@ client.on("messageCreate", async (message) => {
   // --- Do not disturb momento ---
   if (message.content.startsWith('!consent')) {
     const user = message.author.id;
-    // Verificando se o usuário já está na lista DO_NOT_DISTURB
+    DO_NOT_DISTURB = carregarDoNotDisturb();
     if (!DO_NOT_DISTURB.includes(user)) {
-        DO_NOT_DISTURB.push(user);
-        await message.react("👎");
-        await message.reply("Removido da diversão. BUUUXA");
+      DO_NOT_DISTURB.push(user);
+      salvarDoNotDisturb(DO_NOT_DISTURB);
+      await message.react("👎");
+      await message.reply("Removido da diversão. BUUUXA");
     } else {
-        await message.reply("Você já foi removido da diversão.");
+      await message.reply("Você já foi removido da diversão.");
     }
   }
 
