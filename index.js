@@ -13,7 +13,7 @@ const canalTeste = process.env.CANAL_TESTE;
 const cargoTeste = process.env.CARGO_TESTE;
 const cargoCSGO = process.env.CARGO_CSGO;
 const jogos = process.env.JOGOS;
-
+const WORD_COUNTER_PATH = 'word_counter.json';
 const markov = new MarkovChain();
 
 const DND_PATH = 'do_not_disturb.json';
@@ -38,6 +38,28 @@ function salvarDoNotDisturb(lista) {
 }
 
 let DO_NOT_DISTURB = carregarDoNotDisturb();
+
+function carregarWordCounter() {
+  try {
+    if (fs.existsSync(WORD_COUNTER_PATH)) {
+      return JSON.parse(fs.readFileSync(WORD_COUNTER_PATH, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Erro ao carregar word_counter:', e);
+  }
+  return {};
+}
+
+function salvarWordCounter(data) {
+  try {
+    fs.writeFileSync(WORD_COUNTER_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Erro ao salvar word_counter:', e);
+  }
+}
+
+let wordCounter = carregarWordCounter();
+
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot está vivo!"));
@@ -129,10 +151,12 @@ client.on("ready", () => {
   }
 });
 
+const PALAVRA_MONITORADA = "hitler";
 // --- Handler principal de mensagens ---
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-
+  
+  const tracker = message.content.toLowerCase();
   // Alimenta a cadeia de markov com as mensagens lidas
   try {
     markov.addMessage(message.content);
@@ -324,8 +348,13 @@ client.on("messageCreate", async (message) => {
     return array;
   }
   if (message.content.startsWith('!gozei')) {
+    const user = message.author.id
+    DO_NOT_DISTURB = carregarDoNotDisturb();
+    if (DO_NOT_DISTURB.includes(user)) {
+        return message.reply('❌ Você está no modo "do not disturb" e não pode usar este comando.');
+    }
     try {
-      if (!message.member.permissions.has('ManageMessages')) {
+      if (!message.member.permissions.has('ManageMessages') ) {
         return message.reply('❌ Você não tem permissão para usar este comando.');
       }
       const guild = message.guild;
@@ -396,6 +425,28 @@ client.on("messageCreate", async (message) => {
     }
   }
 
+  // --- Remove o user da do not disturb ---
+  if (message.content.startsWith("!reinclude")){
+    // Celeron --- Hokster --- Outachi --- Gull --- Marsh --- Maia
+    const permitidos = ["332298877665411084","703322022494732303","271218339311910912","981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"];
+    if (!permitidos.includes(message.author.id)) {
+      await message.reply("Você não tem permissão pra usar esse comando. 🐀🐀🐀");
+      return;
+    }
+
+    const args = message.content.trim().split(' ').slice(1);
+    const user = args.join(' ').trim();
+    
+    const index = DO_NOT_DISTURB.indexOf(user);
+    if (index !== -1) {
+      DO_NOT_DISTURB.splice(index, 1);
+      salvarDoNotDisturb(DO_NOT_DISTURB);
+      await message.reply(`Usuário removido da lista DND ✅`);
+    } else {
+      await message.reply(`Usuário não estava na lista DND ❌`);
+    }
+}
+
 
   if (message.content.startsWith('!leite')) {
   await message.channel.send(`**LEITE
@@ -407,6 +458,57 @@ client.on("messageCreate", async (message) => {
 
   instruções
   1. bate uma pra mim**`);
+  
+  // --- [Redacted] Counter ---
+  if (tracker.includes(PALAVRA_MONITORADA)) {
+    const agora = Date.now();
+    if (!wordCounter[PALAVRA_MONITORADA]) {
+      wordCounter[PALAVRA_MONITORADA] = {
+        last: agora,
+        record: 0,
+        recordDate: agora
+      };
+      salvarWordCounter(wordCounter);
+      await message.channel.send(`Primeira vez que falamos "${PALAVRA_MONITORADA}".`);
+      return;
+    }
+    const tempoSemFalar = agora - wordCounter[PALAVRA_MONITORADA].last;
+    let recorde = wordCounter[PALAVRA_MONITORADA].record;
+    let recordeData = wordCounter[PALAVRA_MONITORADA].recordDate;
+    let novoRecorde = false;
+    if (tempoSemFalar > recorde) {
+      recorde = tempoSemFalar;
+      recordeData = agora;
+      wordCounter[PALAVRA_MONITORADA].record = recorde;
+      wordCounter[PALAVRA_MONITORADA].recordDate = recordeData;
+      novoRecorde = true;
+    }
+    wordCounter[PALAVRA_MONITORADA].last = agora;
+    salvarWordCounter(wordCounter);
+
+    function formatarTempo(ms) {
+      const seg = Math.floor(ms / 1000) % 60;
+      const min = Math.floor(ms / 1000 / 60) % 60;
+      const horas = Math.floor(ms / 1000 / 60 / 60) % 24;
+      const dias = Math.floor(ms / 1000 / 60 / 60 / 24);
+      let partes = [];
+      if (dias) partes.push(`${dias}d`);
+      if (horas) partes.push(`${horas}h`);
+      if (min) partes.push(`${min}m`);
+      if (seg) partes.push(`${seg}s`);
+      return partes.length ? partes.join(' ') : 'menos de 1s';
+    }
+
+    await message.channel.send(
+      `Estamos há ${formatarTempo(tempoSemFalar)} sem falar "${PALAVRA_MONITORADA}".\n` +
+      `Nosso recorde atual é de ${formatarTempo(recorde)}.` +
+      (novoRecorde ? " 🏆 Novo recorde!" : "")
+    );
+  }
+
+
+
+
 }
 
 });
