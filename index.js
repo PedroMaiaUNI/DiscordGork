@@ -446,6 +446,52 @@ client.on("messageCreate", async (message) => {
       await message.reply(`Usuário não estava na lista DND ❌`);
     }
 }
+// --- [Redacted] Counter ---
+if (tracker.includes(PALAVRA_MONITORADA)) {
+  const agora = Date.now();
+  if (!wordCounter[PALAVRA_MONITORADA]) {
+    wordCounter[PALAVRA_MONITORADA] = {
+      last: agora,
+      record: 0,
+      recordDate: agora
+    };
+    salvarWordCounter(wordCounter);
+    await message.channel.send(`Primeira vez que falamos "${PALAVRA_MONITORADA}".`);
+    return;
+  }
+  const tempoSemFalar = agora - wordCounter[PALAVRA_MONITORADA].last;
+  let recorde = wordCounter[PALAVRA_MONITORADA].record;
+  let recordeData = wordCounter[PALAVRA_MONITORADA].recordDate;
+  let novoRecorde = false;
+  if (tempoSemFalar > recorde) {
+    recorde = tempoSemFalar;
+    recordeData = agora;
+    wordCounter[PALAVRA_MONITORADA].record = recorde;
+    wordCounter[PALAVRA_MONITORADA].recordDate = recordeData;
+    novoRecorde = true;
+  }
+  wordCounter[PALAVRA_MONITORADA].last = agora;
+  salvarWordCounter(wordCounter);
+
+  function formatarTempo(ms) {
+    const seg = Math.floor(ms / 1000) % 60;
+    const min = Math.floor(ms / 1000 / 60) % 60;
+    const horas = Math.floor(ms / 1000 / 60 / 60) % 24;
+    const dias = Math.floor(ms / 1000 / 60 / 60 / 24);
+    let partes = [];
+    if (dias) partes.push(`${dias}d`);
+    if (horas) partes.push(`${horas}h`);
+    if (min) partes.push(`${min}m`);
+    if (seg) partes.push(`${seg}s`);
+    return partes.length ? partes.join(' ') : 'menos de 1s';
+  }
+
+  await message.channel.send(
+    `Estamos há ${formatarTempo(tempoSemFalar)} sem falar "${PALAVRA_MONITORADA}".\n` +
+    `Nosso recorde atual é de ${formatarTempo(recorde)}.` +
+    (novoRecorde ? " 🏆 Novo recorde!" : "")
+  );
+}
 
 
   if (message.content.startsWith('!leite')) {
@@ -459,52 +505,6 @@ client.on("messageCreate", async (message) => {
   instruções
   1. bate uma pra mim**`);
   
-  // --- [Redacted] Counter ---
-  if (tracker.includes(PALAVRA_MONITORADA)) {
-    const agora = Date.now();
-    if (!wordCounter[PALAVRA_MONITORADA]) {
-      wordCounter[PALAVRA_MONITORADA] = {
-        last: agora,
-        record: 0,
-        recordDate: agora
-      };
-      salvarWordCounter(wordCounter);
-      await message.channel.send(`Primeira vez que falamos "${PALAVRA_MONITORADA}".`);
-      return;
-    }
-    const tempoSemFalar = agora - wordCounter[PALAVRA_MONITORADA].last;
-    let recorde = wordCounter[PALAVRA_MONITORADA].record;
-    let recordeData = wordCounter[PALAVRA_MONITORADA].recordDate;
-    let novoRecorde = false;
-    if (tempoSemFalar > recorde) {
-      recorde = tempoSemFalar;
-      recordeData = agora;
-      wordCounter[PALAVRA_MONITORADA].record = recorde;
-      wordCounter[PALAVRA_MONITORADA].recordDate = recordeData;
-      novoRecorde = true;
-    }
-    wordCounter[PALAVRA_MONITORADA].last = agora;
-    salvarWordCounter(wordCounter);
-
-    function formatarTempo(ms) {
-      const seg = Math.floor(ms / 1000) % 60;
-      const min = Math.floor(ms / 1000 / 60) % 60;
-      const horas = Math.floor(ms / 1000 / 60 / 60) % 24;
-      const dias = Math.floor(ms / 1000 / 60 / 60 / 24);
-      let partes = [];
-      if (dias) partes.push(`${dias}d`);
-      if (horas) partes.push(`${horas}h`);
-      if (min) partes.push(`${min}m`);
-      if (seg) partes.push(`${seg}s`);
-      return partes.length ? partes.join(' ') : 'menos de 1s';
-    }
-
-    await message.channel.send(
-      `Estamos há ${formatarTempo(tempoSemFalar)} sem falar "${PALAVRA_MONITORADA}".\n` +
-      `Nosso recorde atual é de ${formatarTempo(recorde)}.` +
-      (novoRecorde ? " 🏆 Novo recorde!" : "")
-    );
-  }
 
 
 
