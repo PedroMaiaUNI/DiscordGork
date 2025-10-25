@@ -514,6 +514,25 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
 
 
 }
+  // ---- conserta os embedding ----
+  if (message.content.includes("https://x.com/") || 
+      message.content.includes("https://instagram.com/reel/")||
+      message.content.includes("https://www.instagram.com/reel/")) {
+
+    let msg = message.content;
+    await message.delete();
+    if(message.content.includes("https://x.com/")){
+      // troca x.com por vx.com
+      msg = msg.replace(/https:\/\/x\.com\//g, "https://fixvx.com/");
+      
+    } else {
+      // troca instagram.com por vxinstagram.com
+      msg = msg.replace(/https:\/\/(www\.)?instagram\.com\//g, "https://www.vxinstagram.com/");
+      // precisa remover endpoints do shareID
+      msg = msg.replace(/(https:\/\/www\.vxinstagram\.com\/reel\/[^\/]+)\/?.*/, "$1/");
+    }
+    await message.channel.send(msg);
+  }
 
 });
 
