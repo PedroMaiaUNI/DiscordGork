@@ -522,6 +522,7 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
   message.content.includes("https://www.instagram.com/")
   ) {
     let msg = message.content;
+    let autor = message.author.name;
     await message.delete();
 
     if (message.content.includes("https://x.com/")) {
@@ -536,7 +537,7 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
       // remove endpoints extras e parâmetros do shareID para /reel/ ou /p/
       msg = msg.replace(/(https:\/\/www\.vxinstagram\.com\/(reel|p)\/[^\/]+)\/?.*/, "$1/");
     }
-  await message.channel.send(`Mensagem enviada por ${message.author.name}` + msg);
+  await message.channel.send(`Mensagem enviada por **${autor}** ` + msg);
 }
 
 });
