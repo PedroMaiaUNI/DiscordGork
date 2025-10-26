@@ -536,7 +536,7 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
       // remove endpoints extras e parâmetros do shareID para /reel/ ou /p/
       msg = msg.replace(/(https:\/\/www\.vxinstagram\.com\/(reel|p)\/[^\/]+)\/?.*/, "$1/");
     }
-  await message.channel.send(msg);
+  await message.channel.send(`Mensagem enviada por ${message.author.name}` + msg);
 }
 
 });
