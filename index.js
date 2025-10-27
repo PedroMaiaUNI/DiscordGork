@@ -522,7 +522,8 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
   message.content.includes("https://www.instagram.com/")
   ) {
     let msg = message.content;
-    let autor = message.author;
+    let autor = message.author.username;
+    if (message.author.bot) return;
     await message.delete();
 
     if (message.content.includes("https://x.com/")) {
