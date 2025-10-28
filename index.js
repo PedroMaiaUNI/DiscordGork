@@ -15,6 +15,7 @@ const cargoCSGO = process.env.CARGO_CSGO;
 const jogos = process.env.JOGOS;
 const WORD_COUNTER_PATH = 'word_counter.json';
 const markov = new MarkovChain();
+let inf = 0.8;
 
 const DND_PATH = 'do_not_disturb.json';
 
@@ -538,7 +539,20 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
       // remove endpoints extras e parâmetros do shareID para /reel/ ou /p/
       msg = msg.replace(/(https:\/\/www\.vxinstagram\.com\/(reel|p)\/[^\/]+)\/?.*/, "$1/");
     }
-  await message.channel.send(`Mensagem enviada por **${autor}** ` + msg);
+  await message.channel.send(`Mensagem enviada por **${autor}** \n` + msg);
+}
+
+if (message.author.id == "311025041418485761") {
+  let result = Math.random();
+  if (result >= inf) {
+    await message.delete();
+    await message.channel.send("Se mata infamous");
+  }
+}
+
+if (message.content.startsWith("!inf")){
+  const novo_min = message.content.replace('!inf', '').trim();
+  inf = parseFloat(novo_min);
 }
 
 });
