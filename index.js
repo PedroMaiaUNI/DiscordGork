@@ -15,7 +15,10 @@ const cargoCSGO = process.env.CARGO_CSGO;
 const jogos = process.env.JOGOS;
 const WORD_COUNTER_PATH = 'word_counter.json';
 const markov = new MarkovChain();
-let inf = 0.8;
+let inf = 0.95;
+
+// Celeron --- Hokster --- Outachi --- Gull --- Marsh --- Maia
+const permitidos = ["332298877665411084","703322022494732303","271218339311910912","981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"];
 
 const DND_PATH = 'do_not_disturb.json';
 
@@ -432,8 +435,7 @@ client.on("messageCreate", async (message) => {
 
   // --- Remove o user da do not disturb ---
   if (message.content.startsWith("!reinclude")){
-    // Celeron --- Hokster --- Outachi --- Gull --- Marsh --- Maia
-    const permitidos = ["332298877665411084","703322022494732303","271218339311910912","981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"];
+    
     if (!permitidos.includes(message.author.id)) {
       await message.reply("Você não tem permissão pra usar esse comando. 🐀🐀🐀");
       return;
@@ -551,8 +553,10 @@ if (message.author.id == "311025041418485761") {
 }
 
 if (message.content.startsWith("!inf")){
+  if (!permitidos.includes(message.author.id)) await message.reply("você não tem permissão para usar esse comando.");
   const novo_min = message.content.replace('!inf', '').trim();
   inf = parseFloat(novo_min);
+  await message.reply("probabilidade alterada.");
 }
 
 });
