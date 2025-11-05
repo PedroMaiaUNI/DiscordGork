@@ -552,6 +552,13 @@ if (message.author.id == "311025041418485761") {
   }
 }
 
+if (message.author.id == "270893747045269505") {
+  let result = Math.random();
+  if (result >= inf) {
+    await message.channel.send(">Terres");
+  }
+}
+
 if (message.content.startsWith("!inf")){
   if (!permitidos.includes(message.author.id)) await message.reply("você não tem permissão para usar esse comando.");
   const novo_min = message.content.replace('!inf', '').trim();
