@@ -544,14 +544,6 @@ if (tracker.includes(PALAVRA_MONITORADA)) {
   await message.channel.send(`Mensagem enviada por **${autor}** \n` + msg);
 }
 
-if (message.author.id == "311025041418485761") {
-  let result = Math.random();
-  if (result >= inf) {
-    await message.delete();
-    await message.channel.send("Se mata infamous");
-  }
-}
-
 if (message.author.id == "270893747045269505") {
   let result = Math.random();
   if (result >= inf) {
