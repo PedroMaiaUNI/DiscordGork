@@ -173,6 +173,12 @@ client.on("messageCreate", async (message) => {
   await message.channel.send(resposta);
   return;
   }
+
+  if (message.content.startsWith('!tabela')) {
+    tabela = "https://cdn.discordapp.com/attachments/1319356140198428794/1445147334286770357/image.png?ex=692f49d6&is=692df856&hm=003297ec638848ada09a99b0a64f18e01530c931a189467783a47db6d3ab7523&"
+    await message.channel.send(tabela);
+    return;
+  }
   
   // Salva imagens recebidas por DM
   if (message.channel.type === 1 && message.attachments.size > 0) {
