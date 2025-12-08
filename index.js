@@ -564,13 +564,13 @@ if (message.content.startsWith("!inf")){
   await message.reply("probabilidade alterada.");
 }
 
-});
 if (message.content.startsWith("!attdata")){
   if(permitidos.includes(message.author.id)){
     DATA_MIDCAST = message.content.replace('!attdata', '').trim();
     await message.reply(`Data atualizada para ${DATA_MIDCAST}`);
   }else return;
 }
+});
 
 /*
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
