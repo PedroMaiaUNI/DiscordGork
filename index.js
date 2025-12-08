@@ -19,7 +19,7 @@ let inf = 0.95;
 
 // Celeron --- Hokster --- Outachi --- Gull --- Marsh --- Maia
 const permitidos = ["332298877665411084","703322022494732303","271218339311910912","981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"];
-const DATA_MIDCAST = "31/12/2025 às 23:59";
+let DATA_MIDCAST = "31/12/2025 às 23:59";
 const DND_PATH = 'do_not_disturb.json';
 
 function carregarDoNotDisturb() {
