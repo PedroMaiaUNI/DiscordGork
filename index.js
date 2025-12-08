@@ -19,7 +19,7 @@ let inf = 0.95;
 
 // Celeron --- Hokster --- Outachi --- Gull --- Marsh --- Maia
 const permitidos = ["332298877665411084","703322022494732303","271218339311910912","981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"];
-
+const DATA_MIDCAST = "31/12/2025 às 23:59";
 const DND_PATH = 'do_not_disturb.json';
 
 function carregarDoNotDisturb() {
@@ -255,7 +255,7 @@ client.on("messageCreate", async (message) => {
     (conteudo.includes("acaba") && conteudo.includes("midiacast")) ||
     (conteudo.includes("termina") && conteudo.includes("midiacast"))
   ) {
-    message.reply("14/12/2025 as 23:59");
+    message.reply(DATA_MIDCAST);
   }
   if (conteudo.includes("qual o minimo")) {
     message.react('🫃');
@@ -565,6 +565,12 @@ if (message.content.startsWith("!inf")){
 }
 
 });
+if (message.content.startsWith("!attdata")){
+  if(permitidos.includes(message.author.id)){
+    DATA_MIDCAST = message.content.replace('!attdata', '').trim();
+    await message.reply(`Data atualizada para ${DATA_MIDCAST}`);
+  }else return;
+}
 
 /*
 // --- Cron para enviar imagem toda sexta-feira às 13h ---
