@@ -1,5 +1,4 @@
 .env
-node_modules/
-respostas.json
-imagensSexta.json
 markov_chain.json
+word_counter.json
+/backups
