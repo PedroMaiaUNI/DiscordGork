@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 	"log"
 	"math/rand"
 	"os"
@@ -12,6 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
+
 	//"enconding/json"
 	//"http"
 	// "io"
@@ -542,6 +544,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	utils.HandleFixEmbeds(s, m)
+	if m.Author.ID == "271218339311910912" && strings.Contains(m.Content, "mygo") {
+		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🧩")
+		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🦖")
+		return
+	}
 	if slices.Contains(m.MentionRoles, CSGO) {
 		s.ChannelMessageSendReply(
 			m.ChannelID,
@@ -550,7 +557,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		)
 		return
 	}
-	
+
 	if !strings.HasPrefix(m.Content, "!") {
 		_ = mc.AddMessage(m.Content)
 	}
@@ -702,7 +709,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			)
 			return
 		}
-		
+
 	}
 
 	if strings.Contains(strings.ToLower(m.Content), "quando") &&
@@ -711,13 +718,27 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSendReply(m.ChannelID, midiacast, m.Reference())
 		return
 	}
-	
-	if strings.Contains(m.Content, "!attdata "){
-		if slices.Contains(permitidos, m.Author.ID){
+	if strings.Contains(strings.ToLower(m.Content),"qual o minimo") || strings.Contains(strings.ToLower(m.Content),"qual o mínimo") {
+		s.MessageReactionAdd(m.ChannelID,m.Reference().MessageID,"🫃")
+	}
+	if strings.Contains(m.Content, "!attdata ") {
+		if slices.Contains(permitidos, m.Author.ID) {
 			nova_data := strings.TrimPrefix(m.Content, "!attdata ")
 			midiacast = nova_data
-			s.ChannelMessageSendReply(m.ChannelID,"data alerada para " + nova_data, m.Reference())
+			s.ChannelMessageSendReply(m.ChannelID, "data alerada para "+nova_data, m.Reference())
 			return
 		}
+	}
+	if m.Content == "!leite"{
+		s.ChannelMessageSend(m.ChannelID,`
+			**LEITE
+ingredientes
+meu pau
+
+ferramentas
+sua mão
+
+instruções
+   	1. bate uma pra mim**`)
 	}
 }
