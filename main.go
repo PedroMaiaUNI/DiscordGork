@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -30,6 +31,8 @@ var (
 	inf         float64 = 0.99
 	mc          *markov.MarkovChain
 	CSGO        string
+	Tonga       = "918671270885851187"
+	Emojis      []*discordgo.Emoji
 )
 
 const (
@@ -45,7 +48,7 @@ func isNumber(s string) bool {
 	return err == nil
 }
 
-func handleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
+func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Sempre carrega do Gist (fonte da verdade)
 	respostas, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
@@ -239,7 +242,7 @@ func handleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 	)
 }
 
-func handleRemoveFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
+func HandleRemoveFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// SEMPRE recarrega do Gist (fonte da verdade)
 	frases, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
@@ -319,7 +322,7 @@ func handleRemoveFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
 	)
 }
 
-func handleMarkov(s *discordgo.Session, m *discordgo.MessageCreate) {
+func HandleMarkov(s *discordgo.Session, m *discordgo.MessageCreate) {
 	texto := mc.Generate("", 30)
 
 	if texto == "" {
@@ -334,7 +337,7 @@ func handleMarkov(s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSend(m.ChannelID, texto)
 }
 
-func handleAutoMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+func HandleAutoMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	frases, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
 		os.Getenv("GIST_FILENAME"),
@@ -368,7 +371,7 @@ func handleAutoMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func handleUndo(s *discordgo.Session, m *discordgo.MessageCreate) {
+func HandleUndo(s *discordgo.Session, m *discordgo.MessageCreate) {
 	frasesBackup, err := utils.LoadLastBackup()
 	if err != nil {
 		s.ChannelMessageSendReply(
@@ -401,7 +404,7 @@ func handleUndo(s *discordgo.Session, m *discordgo.MessageCreate) {
 	)
 }
 
-func handlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, palavra string) {
+func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, palavra string) {
 	content := strings.ToLower(m.Content)
 	palavra = strings.ToLower(palavra)
 
@@ -514,6 +517,10 @@ func main() {
 		return
 	}
 
+	Emojis, _ = load_emojis(dg)
+	Emojis = append(Emojis, &discordgo.Emoji{Name: "🫃"})
+	fmt.Println(len(Emojis))
+
 	dg.AddHandler(messageCreate)
 
 	err = dg.Open()
@@ -539,7 +546,18 @@ func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	return false
 }
 
+func load_emojis(s *discordgo.Session) ([]*discordgo.Emoji, error) {
+
+	Emojis, err := s.GuildEmojis(Tonga)
+
+	if err != nil {
+		return nil, errors.New("erro ao carregar emojis")
+	}
+	return Emojis, nil
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	utils.MaybeReact(s, m, Emojis)
 	if m.Author.Bot {
 		return
 	}
@@ -563,7 +581,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if n_mensagens == 200 || bot_mencionado(s, m) {
-		handleAutoMessage(s, m)
+		HandleAutoMessage(s, m)
 		atomic.StoreInt64(&n_mensagens, 0)
 	}
 
@@ -662,7 +680,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "!listfrases") {
-		handleListFrases(s, m)
+		HandleListFrases(s, m)
 	}
 
 	if strings.HasPrefix(m.Content, "!rmfrase ") {
@@ -674,20 +692,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if err == nil {
 			_ = utils.BackupFrases(frasesAtuais)
 		}
-		handleRemoveFrase(s, m)
+		HandleRemoveFrase(s, m)
 
 	}
 
 	if m.Content == "!markov" {
-		handleMarkov(s, m)
+		HandleMarkov(s, m)
 	}
 
 	if m.Content == "!undo" {
-		handleUndo(s, m)
+		HandleUndo(s, m)
 	}
 
 	if strings.Contains(m.Content, "hitler") {
-		handlePalavraMonitorada(s, m, "hitler")
+		HandlePalavraMonitorada(s, m, "hitler")
 	}
 
 	if strings.Contains(m.Content, "!inf ") {
@@ -718,8 +736,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSendReply(m.ChannelID, midiacast, m.Reference())
 		return
 	}
-	if strings.Contains(strings.ToLower(m.Content),"qual o minimo") || strings.Contains(strings.ToLower(m.Content),"qual o mínimo") {
-		s.MessageReactionAdd(m.ChannelID,m.Reference().MessageID,"🫃")
+	if strings.Contains(strings.ToLower(m.Content), "qual o minimo") || strings.Contains(strings.ToLower(m.Content), "qual o mínimo") {
+		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🫃")
 	}
 	if strings.Contains(m.Content, "!attdata ") {
 		if slices.Contains(permitidos, m.Author.ID) {
@@ -729,8 +747,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 	}
-	if m.Content == "!leite"{
-		s.ChannelMessageSend(m.ChannelID,`
+	if m.Content == "!leite" {
+		s.ChannelMessageSend(m.ChannelID, `
 			**LEITE
 ingredientes
 meu pau
@@ -741,4 +759,32 @@ sua mão
 instruções
    	1. bate uma pra mim**`)
 	}
+	
+	if strings.Contains(strings.ToLower(m.Content), "is this true") {
+		r := rand.Float64() // número entre 0.0 e 1.0
+
+		var resposta string
+
+		switch {
+		case r < 0.2:
+			resposta = "https://tenor.com/view/morgan-freeman-true-morgan-freeman-true-nodding-gif-13973817878387504960"
+		case r < 0.4:
+			resposta = "https://tenor.com/view/anon-chihaya-chihaya-anon-anon-chihaya-mygo-gif-14775622618894457051"
+		case r < 0.6:
+			resposta = "https://tenor.com/view/its-peak-its-mid-fight-morgan-freeman-gif-6564041502742593422"
+		case r < 0.8:
+			resposta = "https://tenor.com/view/chihaya-anon-anon-chihaya-anon-true-mygo-true-gif-11063547078262177235"
+		default:
+			resposta = "https://cdn.discordapp.com/attachments/1362454934997696642/1374740964790243399/images373.jpg?ex=682f26cb&is=682dd54b&hm=b6230e85ddd3e2ce9eb9c2bfd8dbab0d3936cac158462cac60f06a9f7fe149ca&"
+		}
+
+		s.ChannelMessageSendReply(
+			m.ChannelID,
+			resposta,
+			m.Reference(),
+		)
+		return
+}
+
+	
 }

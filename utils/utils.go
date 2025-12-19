@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/bwmarrin/discordgo"
 	"golang.org/x/text/unicode/norm"
 	"io"
+	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
-	"github.com/bwmarrin/discordgo"
-	"regexp"
-	"log"
 )
 
 type WordStat struct {
@@ -161,6 +162,7 @@ func Load_ImgSexta() {
 func Save_ImgSexta() {
 
 }
+
 // para o gist
 func Load_Gist(gistID string, filename string, token string) ([]Frase, error) {
 	client := http.Client{
@@ -316,5 +318,32 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	)
 	if err != nil {
 		log.Println("Erro ao reenviar mensagem:", err)
+	}
+}
+func EmojiToReaction(e discordgo.Emoji) string {
+	if e.ID != "" {
+		// emoji de guilda
+		return e.Name + ":" + e.ID
+	}
+	// emoji unicode
+	return e.Name
+}
+func MaybeReact(s *discordgo.Session, m *discordgo.MessageCreate, emojis []*discordgo.Emoji) {
+
+	// 5% de chance
+	if rand.Intn(100) >= 5 {
+		return
+	}
+
+	// escolhe emoji aleatório
+	e := emojis[rand.Intn(len(emojis))]
+
+	err := s.MessageReactionAdd(
+		m.ChannelID,
+		m.ID,
+		EmojiToReaction(*e),
+	)
+	if err != nil {
+		fmt.Println("Erro ao reagir:", err)
 	}
 }
