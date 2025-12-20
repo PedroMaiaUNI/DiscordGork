@@ -362,15 +362,16 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 		return
 	}
 
-	now := time.Now().Unix()
+	nowMs := time.Now().UnixMilli()
 
 	stat, exists := counter[palavra]
 
-	//  PRIMEIRA VEZ
+	// PRIMEIRA VEZ
 	if !exists {
 		counter[palavra] = utils.WordStat{
-			LastTime: now,
-			Record:   0,
+			Last:       nowMs,
+			Record:     0,
+			RecordDate: 0,
 		}
 
 		_ = utils.Save_WordCounter(WORD_COUNTER_PATH, counter)
@@ -383,10 +384,10 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 		return
 	}
 
-	//  JÁ EXISTE → COMPARA TEMPO
-	diff := now - stat.LastTime
+	// diferença em SEGUNDOS
+	diffSeconds := (nowMs - stat.Last) / 1000
 
-	tempoAtual := utils.FormatDuration(diff)
+	tempoAtual := utils.FormatDuration(diffSeconds)
 	tempoRecorde := utils.FormatDuration(stat.Record)
 
 	msg := fmt.Sprintf(
@@ -396,13 +397,15 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 		tempoRecorde,
 	)
 
-	if diff > stat.Record {
-		stat.Record = diff
+	// NOVO RECORDE
+	if diffSeconds > stat.Record {
+		stat.Record = diffSeconds
+		stat.RecordDate = nowMs
 		msg += "\n🎉 **Novo recorde!**"
 	}
 
-	//  ATUALIZA APENAS DEPOIS DA COMPARAÇÃO
-	stat.LastTime = now
+	// atualiza última ocorrência
+	stat.Last = nowMs
 	counter[palavra] = stat
 
 	_ = utils.Save_WordCounter(WORD_COUNTER_PATH, counter)
@@ -413,6 +416,7 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 		m.Reference(),
 	)
 }
+
 
 func main() {
 	_ = godotenv.Load()

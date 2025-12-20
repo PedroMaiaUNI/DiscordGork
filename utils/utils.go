@@ -18,8 +18,9 @@ import (
 )
 
 type WordStat struct {
-	LastTime int64 `json:"last_time"`
-	Record   int64 `json:"record"`
+	Last       int64 `json:"last"`        
+	Record     int64 `json:"record"`      
+	RecordDate int64 `json:"recordDate"`  
 }
 
 type Frase struct {
@@ -75,35 +76,22 @@ func Remover_Acentos(s string) string {
 	return b.String()
 }
 
-func FormatarTempo(ms int64) string {
-	seg := (ms / 1000) % 60
-	min := (ms / 1000 / 60) % 60
-	horas := (ms / 1000 / 60 / 60) % 24
-	dias := ms / 1000 / 60 / 60 / 24
-
-	var partes []string
-	if dias > 0 {
-		partes = append(partes, fmt.Sprintf("%dd", dias))
-	}
-	if horas > 0 {
-		partes = append(partes, fmt.Sprintf("%dh", horas))
-	}
-	if min > 0 {
-		partes = append(partes, fmt.Sprintf("%dm", min))
-	}
-	if seg > 0 {
-		partes = append(partes, fmt.Sprintf("%ds", seg))
+func FormatSince(lastMillis int64) string {
+	if lastMillis <= 0 {
+		return "nunca"
 	}
 
-	if len(partes) == 0 {
-		return "menos de 1s"
+	diffSeconds := (time.Now().UnixMilli() - lastMillis) / 1000
+	if diffSeconds < 0 {
+		diffSeconds = 0
 	}
-	return strings.Join(partes, " ")
+
+	return FormatDuration(diffSeconds)
 }
 
 func FormatDuration(seconds int64) string {
-	if seconds < 0 {
-		seconds = 0
+	if seconds <= 0 {
+		return "0s"
 	}
 
 	d := seconds / 86400
@@ -116,16 +104,19 @@ func FormatDuration(seconds int64) string {
 	if d > 0 {
 		parts = append(parts, fmt.Sprintf("%dd", d))
 	}
-	if h > 0 || d > 0 {
+	if h > 0 {
 		parts = append(parts, fmt.Sprintf("%dh", h))
 	}
-	if m > 0 || h > 0 || d > 0 {
+	if m > 0 {
 		parts = append(parts, fmt.Sprintf("%dm", m))
 	}
-	parts = append(parts, fmt.Sprintf("%ds", s))
+	if s > 0 || len(parts) == 0 {
+		parts = append(parts, fmt.Sprintf("%ds", s))
+	}
 
 	return strings.Join(parts, " ")
 }
+
 
 func Load_WordCounter(path string) (map[string]WordStat, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -137,22 +128,39 @@ func Load_WordCounter(path string) (map[string]WordStat, error) {
 		return nil, err
 	}
 
-	var counter map[string]WordStat
+	counter := make(map[string]WordStat)
 	if err := json.Unmarshal(data, &counter); err != nil {
 		return nil, err
+	}
+
+	// saneamento básico
+	now := time.Now().UnixMilli()
+	for k, v := range counter {
+		if v.Last > now {
+			v.Last = now
+		}
+		if v.Record < 0 {
+			v.Record = 0
+		}
+		if v.RecordDate > now {
+			v.RecordDate = 0
+		}
+		counter[k] = v
 	}
 
 	return counter, nil
 }
 
+
 func Save_WordCounter(path string, data map[string]WordStat) error {
-	bytes, err := json.MarshalIndent(data, "", " ")
+	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	return os.WriteFile(path, bytes, 0644)
 }
+
 
 // imgs de sexta (um dia vai funcionar, eu confio)
 func Load_ImgSexta() {
@@ -333,8 +341,8 @@ func MaybeReact(s *discordgo.Session, m *discordgo.MessageCreate, emojis []*disc
 		return
 	}
 
-	// 5% de chance
-	if rand.Intn(100) >= 100 {
+	// 1% de chance
+	if rand.Intn(100) >= 1 {
 		return
 	}
 
