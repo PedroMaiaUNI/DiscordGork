@@ -329,9 +329,12 @@ func EmojiToReaction(e discordgo.Emoji) string {
 	return e.Name
 }
 func MaybeReact(s *discordgo.Session, m *discordgo.MessageCreate, emojis []*discordgo.Emoji) {
+	if len(emojis) == 0 {
+		return
+	}
 
 	// 5% de chance
-	if rand.Intn(100) >= 5 {
+	if rand.Intn(100) >= 100 {
 		return
 	}
 

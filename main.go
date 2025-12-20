@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -20,6 +19,7 @@ import (
 	// "io"
 	"bot/markov"
 	"bot/utils"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -31,8 +31,9 @@ var (
 	inf         float64 = 0.99
 	mc          *markov.MarkovChain
 	CSGO        string
-	Tonga       = "918671270885851187"
 	Emojis      []*discordgo.Emoji
+	frasesCache []utils.Frase
+	frasesMu    sync.RWMutex
 )
 
 const (
@@ -40,7 +41,7 @@ const (
 	DND_PATH           = "do_not_disturb.json"
 	WORD_COUNTER_PATH  = "word_counter.json"
 	PALAVRA_MONITORADA = "hitler"
-	TONGA              = "918671270885851187"
+	Tonga              = "918671270885851187"
 )
 
 func isNumber(s string) bool {
@@ -48,24 +49,30 @@ func isNumber(s string) bool {
 	return err == nil
 }
 
-func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Sempre carrega do Gist (fonte da verdade)
-	respostas, err := utils.Load_Gist(
-		os.Getenv("GIST_ID"),
-		os.Getenv("GIST_FILENAME"),
-		os.Getenv("GITHUB_TOKEN"),
-	)
-	if err != nil {
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"❌ Erro ao carregar frases.",
-			m.Reference(),
-		)
+func handleAddFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
+	msg := strings.TrimSpace(strings.TrimPrefix(m.Content, "!addfrase"))
+	if msg == "" || strings.Contains(msg, "@everyone") {
 		return
 	}
 
-	// JS: if (respostas.length === 0)
-	if len(respostas) == 0 {
+	frasesMu.Lock()
+	frasesCache = append(frasesCache, utils.Frase{
+		Texto: msg,
+		Autor: m.Author.Username,
+	})
+	utils.BackupFrases(frasesCache)
+	frasesMu.Unlock()
+
+	saveFrasesAsync()
+
+	s.ChannelMessageSendReply(m.ChannelID, "✅ Frase adicionada!", m.Reference())
+}
+
+func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
+	frasesMu.RLock()
+	defer frasesMu.RUnlock()
+
+	if len(frasesCache) == 0 {
 		s.ChannelMessageSendReply(
 			m.ChannelID,
 			"⚠️ Nenhuma frase cadastrada ainda.",
@@ -88,7 +95,7 @@ func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 		!strings.Contains(termo, "#") &&
 		!strings.HasPrefix(termo, "<@") {
 
-		for _, f := range respostas {
+		for _, f := range frasesCache {
 			if strings.Contains(
 				strings.ToLower(f.Texto),
 				strings.ToLower(termo),
@@ -136,7 +143,7 @@ func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		var frasesAutor []utils.Frase
-		for _, f := range respostas {
+		for _, f := range frasesCache {
 			if f.Autor == autorFiltro {
 				frasesAutor = append(frasesAutor, f)
 			}
@@ -187,7 +194,7 @@ func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// 🚫 Remove links
 	var semLinks []utils.Frase
-	for _, f := range respostas {
+	for _, f := range frasesCache {
 		if !strings.HasPrefix(strings.ToLower(f.Texto), "http://") &&
 			!strings.HasPrefix(strings.ToLower(f.Texto), "https://") {
 			semLinks = append(semLinks, f)
@@ -240,86 +247,41 @@ func HandleListFrases(s *discordgo.Session, m *discordgo.MessageCreate) {
 		),
 		m.Reference(),
 	)
+
+}
+
+func saveFrasesAsync() {
+	go func() {
+		frasesMu.RLock()
+		defer frasesMu.RUnlock()
+
+		_ = utils.Update_Gist(
+			os.Getenv("GIST_ID"),
+			os.Getenv("GIST_FILENAME"),
+			os.Getenv("GITHUB_TOKEN"),
+			frasesCache,
+		)
+	}()
 }
 
 func HandleRemoveFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// SEMPRE recarrega do Gist (fonte da verdade)
-	frases, err := utils.Load_Gist(
-		os.Getenv("GIST_ID"),
-		os.Getenv("GIST_FILENAME"),
-		os.Getenv("GITHUB_TOKEN"),
-	)
-	if err != nil {
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"❌ Erro ao carregar frases do Gist. Operação cancelada.",
-			m.Reference(),
-		)
-		log.Println("Load_Gist no rmfrase:", err)
-		return
-	}
+	alvo := strings.TrimSpace(strings.TrimPrefix(m.Content, "!rmfrase"))
 
-	fraseAlvo := strings.TrimSpace(
-		strings.TrimPrefix(m.Content, "!rmfrase"),
-	)
+	frasesMu.Lock()
+	defer frasesMu.Unlock()
 
-	if fraseAlvo == "" {
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"❗ Escreva exatamente a frase que deseja remover após o comando.",
-			m.Reference(),
-		)
-		return
-	}
-
-	index := -1
-	for i, f := range frases {
-		if f.Texto == fraseAlvo {
-			index = i
-			break
+	for i, f := range frasesCache {
+		if f.Texto == alvo {
+			frasesCache = append(frasesCache[:i], frasesCache[i+1:]...)
+			utils.BackupFrases(frasesCache)
+			saveFrasesAsync()
+			s.ChannelMessageSendReply(m.ChannelID, "✅ Frase removida.", m.Reference())
+			return
 		}
 	}
 
-	if index == -1 {
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"❌ Frase não encontrada. Verifique se digitou exatamente igual.",
-			m.Reference(),
-		)
-		return
-	}
+	s.ChannelMessageSendReply(m.ChannelID, "❌ Frase não encontrada.", m.Reference())
 
-	// Remove da lista correta
-	novaLista := append(
-		frases[:index],
-		frases[index+1:]...,
-	)
-
-	// Salva no Gist
-	err = utils.Update_Gist(
-		os.Getenv("GIST_ID"),
-		os.Getenv("GIST_FILENAME"),
-		os.Getenv("GITHUB_TOKEN"),
-		novaLista,
-	)
-	if err != nil {
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"❌ Erro ao salvar a remoção no Gist.",
-			m.Reference(),
-		)
-		log.Println("Update_Gist no rmfrase:", err)
-		return
-	}
-
-	// Atualiza cache local
-	frases = novaLista
-
-	s.ChannelMessageSendReply(
-		m.ChannelID,
-		"✅ Frase removida com sucesso.",
-		m.Reference(),
-	)
 }
 
 func HandleMarkov(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -338,37 +300,16 @@ func HandleMarkov(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func HandleAutoMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
-	frases, err := utils.Load_Gist(
-		os.Getenv("GIST_ID"),
-		os.Getenv("GIST_FILENAME"),
-		os.Getenv("GITHUB_TOKEN"),
-	)
-	if err != nil {
-		s.ChannelMessageSend(m.ChannelID, "ERRO AO CARREGAR O GIST")
+	frasesMu.RLock()
+	defer frasesMu.RUnlock()
+
+	if len(frasesCache) > 0 && rand.Intn(2) == 0 {
+		f := frasesCache[rand.Intn(len(frasesCache))]
+		s.ChannelMessageSend(m.ChannelID, f.Texto)
 		return
 	}
 
-	// 50% frase, 50% markov
-	if len(frases) > 0 && rand.Intn(2) == 0 {
-		// escolhe frase aleatória
-		f := frases[rand.Intn(len(frases))]
-		s.ChannelMessageSend(
-			m.ChannelID,
-			f.Texto,
-		)
-		fmt.Println("frase")
-		return
-	}
-
-	// fallback ou escolha Markov
-	texto := mc.Generate("", 30)
-	if texto != "" {
-		s.ChannelMessageSend(
-			m.ChannelID,
-			texto,
-		)
-		fmt.Println("markovgpt")
-	}
+	s.ChannelMessageSend(m.ChannelID, mc.Generate("", 30))
 }
 
 func HandleUndo(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -396,6 +337,9 @@ func HandleUndo(s *discordgo.Session, m *discordgo.MessageCreate) {
 		)
 		return
 	}
+	frasesMu.Lock()
+	frasesCache = frasesBackup
+	frasesMu.Unlock()
 
 	s.ChannelMessageSendReply(
 		m.ChannelID,
@@ -471,69 +415,50 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 }
 
 func main() {
+	_ = godotenv.Load()
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Erro ao carregar .env:", err)
-	}
-
-	Token := os.Getenv("TOKEN")
-	if Token == "" {
-		log.Fatal("TOKEN não definido")
-	}
-	dnd, err := utils.Load_DND(DND_PATH)
-	if err != nil {
-		log.Fatal(err)
+	token := os.Getenv("TOKEN")
+	CSGO = os.Getenv("CARGO_CSGO")
+	if token == "" {
+		log.Fatal("TOKEN ausente")
 	}
 
-	wordCounter, err := utils.Load_WordCounter(WORD_COUNTER_PATH)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("DND e Word counter carregados:", len(dnd), " ", len(wordCounter))
+	// 🔹 Load inicial do Gist (UMA VEZ)
 	frases, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
 		os.Getenv("GIST_FILENAME"),
 		os.Getenv("GITHUB_TOKEN"),
 	)
-	//fmt.Println("GIST_ID:", os.Getenv("GIST_ID"))
-	//fmt.Println("GIST_FILENAME:", os.Getenv("GIST_FILENAME"))
-	//fmt.Println("GITHUB_TOKEN vazio?:", os.Getenv("GITHUB_TOKEN") == "")
+	if err != nil {
+		log.Fatal("Erro ao carregar Gist:", err)
+	}
+	frasesCache = frases
+	fmt.Println("Frases carregadas:", len(frasesCache))
 
-	fmt.Println("Frases carregadas:", len(frases))
+	// 🔹 Markov
+	mc, err = markov.NewMarkovChain("markov_chain.json")
 	if err != nil {
 		log.Fatal(err)
 	}
-	CSGO = os.Getenv("CARGO_CSGO")
 
-	mc, err = markov.NewMarkovChain("markov_chain.json")
+	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatal("Erro ao carregar Markov:", err)
-	}
-	fmt.Println("Cadeia de Markov carregada")
-	dg, err := discordgo.New("Bot " + Token)
-	if err != nil {
-		fmt.Println("Erro ao criar sessão:", err)
-		return
+		log.Fatal(err)
 	}
 
-	Emojis, _ = load_emojis(dg)
+	Emojis, _ = dg.GuildEmojis(Tonga)
 	Emojis = append(Emojis, &discordgo.Emoji{Name: "🫃"})
-	fmt.Println(len(Emojis))
 
 	dg.AddHandler(messageCreate)
 
-	err = dg.Open()
-	if err != nil {
-		fmt.Println("Erro ao conectar:", err)
-		return
+	if err := dg.Open(); err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println("Bot está rodando. Pressione CTRL+C para sair.")
 
+	fmt.Println("Bot online 🚀")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
-
 	dg.Close()
 }
 
@@ -546,21 +471,12 @@ func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	return false
 }
 
-func load_emojis(s *discordgo.Session) ([]*discordgo.Emoji, error) {
-
-	Emojis, err := s.GuildEmojis(Tonga)
-
-	if err != nil {
-		return nil, errors.New("erro ao carregar emojis")
-	}
-	return Emojis, nil
-}
-
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	utils.MaybeReact(s, m, Emojis)
 	if m.Author.Bot {
 		return
 	}
+	HandlePalavraMonitorada(s, m, PALAVRA_MONITORADA)
+	utils.MaybeReact(s, m, Emojis)
 	utils.HandleFixEmbeds(s, m)
 	if m.Author.ID == "271218339311910912" && strings.Contains(m.Content, "mygo") {
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🧩")
@@ -580,12 +496,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		_ = mc.AddMessage(m.Content)
 	}
 
-	if n_mensagens == 200 || bot_mencionado(s, m) {
+	if atomic.AddInt64(&n_mensagens, 1) >= 200 || bot_mencionado(s, m) {
 		HandleAutoMessage(s, m)
 		atomic.StoreInt64(&n_mensagens, 0)
 	}
-
-	atomic.AddInt64(&n_mensagens, 1)
 
 	if m.Content == "!ping" {
 		s.ChannelMessageSend(m.ChannelID, "pong 🏓")
@@ -614,98 +528,21 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(m.ChannelID, "https://cdn.discordapp.com/attachments/1319356140198428794/1445147334286770357/image.png?ex=692f49d6&is=692df856&hm=003297ec638848ada09a99b0a64f18e01530c931a189467783a47db6d3ab7523&")
 	}
 
-	if after, ok := strings.CutPrefix(m.Content, "!addfrase "); ok {
-		msg := after
-		if msg == "" || strings.Contains(msg, "@everyone") {
-			s.ChannelMessageSendReply(
-				m.ChannelID,
-				"Mensagem inválida",
-				m.Reference(),
-			)
-			return
-		}
+	switch {
+	case strings.HasPrefix(m.Content, "!addfrase "):
+		handleAddFrase(s, m)
 
-		//  SEMPRE recarrega do Gist (fonte da verdade)
-		frases, err := utils.Load_Gist(
-			os.Getenv("GIST_ID"),
-			os.Getenv("GIST_FILENAME"),
-			os.Getenv("GITHUB_TOKEN"),
-		)
-		if err != nil {
-			s.ChannelMessageSendReply(
-				m.ChannelID,
-				"❌ Erro ao carregar frases do Gist. Operação cancelada.",
-				m.Reference(),
-			)
-			log.Println("Load_Gist no addfrase:", err)
-			return
-		}
-		if len(frases) == 0 {
-			s.ChannelMessageSendReply(
-				m.ChannelID,
-				"⚠️ Gist retornou vazio. Salvamento bloqueado por segurança.",
-				m.Reference(),
-			)
-			return
-		}
-
-		nova := utils.Frase{
-			Texto: msg,
-			Autor: m.Author.Username,
-		}
-
-		frases = append(frases, nova)
-
-		err = utils.Update_Gist(
-			os.Getenv("GIST_ID"),
-			os.Getenv("GIST_FILENAME"),
-			os.Getenv("GITHUB_TOKEN"),
-			frases,
-		)
-		if err != nil {
-			s.ChannelMessageSendReply(
-				m.ChannelID,
-				"❌ Erro ao salvar a frase.",
-				m.Reference(),
-			)
-			log.Println("Update_Gist no addfrase:", err)
-			return
-		}
-
-		s.ChannelMessageSendReply(
-			m.ChannelID,
-			"✅ Frase adicionada com sucesso!",
-			m.Reference(),
-		)
-	}
-
-	if strings.HasPrefix(m.Content, "!listfrases") {
-		HandleListFrases(s, m)
-	}
-
-	if strings.HasPrefix(m.Content, "!rmfrase ") {
-		frasesAtuais, err := utils.Load_Gist(
-			os.Getenv("GIST_ID"),
-			os.Getenv("GIST_FILENAME"),
-			os.Getenv("GITHUB_TOKEN"),
-		)
-		if err == nil {
-			_ = utils.BackupFrases(frasesAtuais)
-		}
+	case strings.HasPrefix(m.Content, "!rmfrase "):
 		HandleRemoveFrase(s, m)
 
-	}
+	case strings.HasPrefix(m.Content, "!listfrases"):
+		HandleListFrases(s, m)
 
-	if m.Content == "!markov" {
-		HandleMarkov(s, m)
-	}
-
-	if m.Content == "!undo" {
+	case m.Content == "!undo":
 		HandleUndo(s, m)
-	}
 
-	if strings.Contains(m.Content, "hitler") {
-		HandlePalavraMonitorada(s, m, "hitler")
+	case m.Content == "!markov":
+		HandleMarkov(s, m)
 	}
 
 	if strings.Contains(m.Content, "!inf ") {
@@ -759,9 +596,9 @@ sua mão
 instruções
    	1. bate uma pra mim**`)
 	}
-	
+
 	if strings.Contains(strings.ToLower(m.Content), "is this true") {
-		r := rand.Float64() // número entre 0.0 e 1.0
+		r := rand.Float32() // número entre 0.0 e 1.0
 
 		var resposta string
 
@@ -776,6 +613,7 @@ instruções
 			resposta = "https://tenor.com/view/chihaya-anon-anon-chihaya-anon-true-mygo-true-gif-11063547078262177235"
 		default:
 			resposta = "https://cdn.discordapp.com/attachments/1362454934997696642/1374740964790243399/images373.jpg?ex=682f26cb&is=682dd54b&hm=b6230e85ddd3e2ce9eb9c2bfd8dbab0d3936cac158462cac60f06a9f7fe149ca&"
+
 		}
 
 		s.ChannelMessageSendReply(
@@ -783,8 +621,8 @@ instruções
 			resposta,
 			m.Reference(),
 		)
-		return
-}
 
-	
+		return
+	}
+
 }
