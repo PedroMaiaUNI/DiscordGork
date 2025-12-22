@@ -529,7 +529,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if m.Content == "!tabela" {
-		s.ChannelMessageSend(m.ChannelID, "https://cdn.discordapp.com/attachments/1319356140198428794/1445147334286770357/image.png?ex=692f49d6&is=692df856&hm=003297ec638848ada09a99b0a64f18e01530c931a189467783a47db6d3ab7523&")
+		s.ChannelMessageSend(m.ChannelID, "https://cdn.discordapp.com/attachments/919309611885015140/1424473155061285025/image.png?ex=694a3fc1&is=6948ee41&hm=3fa4e96cce2b043b6f42e0fb5e7e405c191f6576c63773f8854d92a5838e908d&")
 	}
 
 	switch {
