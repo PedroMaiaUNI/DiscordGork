@@ -25,15 +25,22 @@ import (
 )
 
 var (
-	n_mensagens int64   = 199
-	permitidos          = []string{"332298877665411084", "703322022494732303", "271218339311910912", "981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"}
-	midiacast   string  = "31/12/2025 às 23:59"
-	inf         float64 = 0.99
-	mc          *markov.MarkovChain
-	CSGO        string
-	Emojis      []*discordgo.Emoji
-	frasesCache []utils.Frase
-	frasesMu    sync.RWMutex
+	n_mensagens        int64   = 195
+	permitidos                 = []string{"332298877665411084", "703322022494732303", "271218339311910912", "981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"}
+	midiacast          string  = "31/12/2025 às 23:59"
+	inf                float64 = 0.99
+	mc                 *markov.MarkovChain
+	CSGO               string
+	Emojis             []*discordgo.Emoji
+	frasesCache        []utils.Frase
+	frasesMu           sync.RWMutex
+	Servers_permitidos = map[string]bool{
+		"715343022363246642":  true, //selerom
+		"918671270885851187":  true, //tonga
+		"828746329093177374":  true, //maia
+		"1235684622810222753": true, //ruan
+
+	}
 )
 
 const (
@@ -43,6 +50,31 @@ const (
 	PALAVRA_MONITORADA = "hitler"
 	Tonga              = "918671270885851187"
 )
+
+func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
+	if g.Guild.Unavailable {
+		return
+	}
+
+	if Servers_permitidos[g.Guild.ID] {
+		return
+	}
+
+	channels, err := s.GuildChannels(g.Guild.ID)
+	if err == nil {
+		for _, ch := range channels {
+			if ch.Type == discordgo.ChannelTypeGuildText {
+				_, _ = s.ChannelMessageSend(
+					ch.ID,
+					"https://media.discordapp.net/attachments/490286224754475008/1209105780876247062/SPOILER_1708325187840346.gif",
+				)
+				break
+			}
+		}
+	}
+
+	_ = s.GuildLeave(g.Guild.ID)
+}
 
 func isNumber(s string) bool {
 	_, err := strconv.Atoi(s)
@@ -417,7 +449,6 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 	)
 }
 
-
 func main() {
 	_ = godotenv.Load()
 
@@ -454,7 +485,7 @@ func main() {
 	Emojis = append(Emojis, &discordgo.Emoji{Name: "🫃"})
 
 	dg.AddHandler(messageCreate)
-
+	dg.AddHandler(guildCreate)
 	if err := dg.Open(); err != nil {
 		log.Fatal(err)
 	}
