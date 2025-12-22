@@ -18,9 +18,9 @@ import (
 )
 
 type WordStat struct {
-	Last       int64 `json:"last"`        
-	Record     int64 `json:"record"`      
-	RecordDate int64 `json:"recordDate"`  
+	Last       int64 `json:"last"`
+	Record     int64 `json:"record"`
+	RecordDate int64 `json:"recordDate"`
 }
 
 type Frase struct {
@@ -33,6 +33,16 @@ type gistResponse struct {
 		Content string `json:"content"`
 	} `json:"files"`
 }
+
+type Img_Sexta struct {
+	Autor    string `json:"autor"`
+	Conteudo string `json:"imagem"`
+}
+
+const (
+	filename    = "imagensSexta.json"
+	Comunicados = "919309611885015140"
+)
 
 // Do not disturb
 func Load_DND(path string) ([]string, error) {
@@ -117,7 +127,6 @@ func FormatDuration(seconds int64) string {
 	return strings.Join(parts, " ")
 }
 
-
 func Load_WordCounter(path string) (map[string]WordStat, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return make(map[string]WordStat), nil
@@ -151,7 +160,6 @@ func Load_WordCounter(path string) (map[string]WordStat, error) {
 	return counter, nil
 }
 
-
 func Save_WordCounter(path string, data map[string]WordStat) error {
 	bytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -161,14 +169,71 @@ func Save_WordCounter(path string, data map[string]WordStat) error {
 	return os.WriteFile(path, bytes, 0644)
 }
 
-
 // imgs de sexta (um dia vai funcionar, eu confio)
-func Load_ImgSexta() {
 
+func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.GuildID == "" {
+		s.ChannelMessageSend(m.ChannelID, "Recebido\n")
+		if m.Content == "" {
+			// eh anexo
+			for _, img := range m.Attachments {
+				nova_img := Img_Sexta{
+					Autor:    m.Author.Username,
+					Conteudo: img.URL,
+				}
+				Save_ImgSexta(nova_img)
+			}
+		} else if strings.Contains(m.Content, "attchments") {
+			// eh link
+			for img := range strings.SplitSeq(m.Content, " ") {
+				nova_img := Img_Sexta{
+					Autor:    m.Author.Username,
+					Conteudo: img,
+				}
+				Save_ImgSexta(nova_img)
+			}
+		}
+	}
 }
 
-func Save_ImgSexta() {
+func Load_ImgSexta(s *discordgo.Session) {
+	var lista []Img_Sexta
 
+	dados, err := os.ReadFile(filename)
+	if err != nil || len(dados) == 0 {
+		return
+	}
+
+	if err := json.Unmarshal(dados, &lista); err != nil {
+		return
+	}
+
+	if len(lista) == 0 {
+		return
+	}
+
+	index := rand.Intn(len(lista))
+	imagemEscolhida := lista[index]
+
+	mensagem := "Imagem do dia" + " enviado por" + imagemEscolhida.Autor
+	s.ChannelMessageSend(Comunicados, mensagem)
+	s.ChannelMessageSend(Comunicados, imagemEscolhida.Conteudo)
+}
+
+func Save_ImgSexta(img Img_Sexta) {
+
+	var lista []Img_Sexta
+
+	dados, err := os.ReadFile(filename)
+	if err == nil {
+		json.Unmarshal(dados, &lista)
+	}
+
+	lista = append(lista, img)
+
+	dadosEscrita, _ := json.MarshalIndent(lista, "", "  ")
+
+	os.WriteFile(filename, dadosEscrita, 0644)
 }
 
 // para o gist

@@ -19,6 +19,7 @@ import (
 	// "io"
 	"bot/markov"
 	"bot/utils"
+	"github.com/robfig/cron/v3"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,7 +45,6 @@ var (
 )
 
 const (
-	imagensPath        = "imagensSexta.json"
 	DND_PATH           = "do_not_disturb.json"
 	WORD_COUNTER_PATH  = "word_counter.json"
 	PALAVRA_MONITORADA = "hitler"
@@ -79,6 +79,22 @@ func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 func isNumber(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
+}
+
+func iniciarAgendador(s *discordgo.Session) {
+
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
+	c := cron.New(cron.WithLocation(loc))
+
+	_, err := c.AddFunc("30 20 * * 2", func() {
+		utils.Load_ImgSexta(s)
+	})
+
+	if err != nil {
+		return
+	}
+
+	c.Start()
 }
 
 func handleAddFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -491,6 +507,7 @@ func main() {
 	}
 
 	fmt.Println("Bot online 🚀")
+	go iniciarAgendador(dg)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
@@ -513,6 +530,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	HandlePalavraMonitorada(s, m, PALAVRA_MONITORADA)
 	utils.MaybeReact(s, m, Emojis)
 	utils.HandleFixEmbeds(s, m)
+	utils.Handler_ImgSexta(s, m)
 	if m.Author.ID == "271218339311910912" && strings.Contains(m.Content, "mygo") {
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🧩")
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🦖")
