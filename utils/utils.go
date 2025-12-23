@@ -43,7 +43,7 @@ const (
 	filename    = "imagensSexta.json"
 	Comunicados = "919309611885015140"
 )
-
+var cooldowns = make(map[string]time.Time)
 // Do not disturb
 func Load_DND(path string) ([]string, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -173,7 +173,15 @@ func Save_WordCounter(path string, data map[string]WordStat) error {
 
 func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.GuildID == "" {
-		s.ChannelMessageSend(m.ChannelID, "Recebido\n")
+		if ultimaVez, ok := cooldowns[m.Author.ID]; ok {
+				// Calcula quanto tempo passou
+				tempoPassado := time.Since(ultimaVez)
+				
+				if tempoPassado < time.Hour {
+					s.ChannelMessageSend(m.ChannelID, "🖕, espere o cooldown de uma hora acabar fuleiro")
+					return
+				}
+		}
 		if m.Content == "" {
 			// eh anexo
 			for _, img := range m.Attachments {
@@ -182,6 +190,7 @@ func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
 					Conteudo: img.URL,
 				}
 				Save_ImgSexta(nova_img)
+				cooldowns[m.Author.ID] = time.Now()
 			}
 		} else if strings.Contains(m.Content, "attchments") {
 			// eh link
@@ -191,6 +200,7 @@ func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
 					Conteudo: img,
 				}
 				Save_ImgSexta(nova_img)
+				cooldowns[m.Author.ID] = time.Now()
 			}
 		}
 	}
@@ -215,7 +225,7 @@ func Load_ImgSexta(s *discordgo.Session) {
 	index := rand.Intn(len(lista))
 	imagemEscolhida := lista[index]
 
-	mensagem := "Imagem do dia" + " enviado por" + imagemEscolhida.Autor
+	mensagem := "Imagem do dia" + " enviado por: " + imagemEscolhida.Autor
 	s.ChannelMessageSend(Comunicados, mensagem)
 	s.ChannelMessageSend(Comunicados, imagemEscolhida.Conteudo)
 }
