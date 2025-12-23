@@ -86,7 +86,7 @@ func iniciarAgendador(s *discordgo.Session) {
 	loc, _ := time.LoadLocation("America/Sao_Paulo")
 	c := cron.New(cron.WithLocation(loc))
 
-	_, err := c.AddFunc("30 20 * * 2", func() {
+	_, err := c.AddFunc("0 13 * * *", func() {
 		utils.Load_ImgSexta(s)
 	})
 
