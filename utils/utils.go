@@ -175,36 +175,37 @@ func Save_WordCounter(path string, data map[string]WordStat) error {
 
 func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.GuildID == "" {
-		if ultimaVez, ok := cooldowns[m.Author.ID]; ok {
-			// Calcula quanto tempo passou
-			tempoPassado := time.Since(ultimaVez)
-
-			if tempoPassado < time.Hour {
-				s.ChannelMessageSend(m.ChannelID, "🖕, espere o cooldown de uma hora acabar fuleiro")
-				return
-			}
-		}
 		if m.Content == "" {
 			// eh anexo
+			if ultimaVez, ok := cooldowns[m.Author.ID]; ok {
+				// Calcula quanto tempo passou
+				tempoPassado := time.Since(ultimaVez)
+
+				if tempoPassado < time.Hour {
+					s.ChannelMessageSend(m.ChannelID, "🖕, espere o cooldown de uma hora acabar fuleiro")
+					return
+				}
+			}
 			for _, img := range m.Attachments {
 				nova_img := Img_Sexta{
 					Autor:    m.Author.Username,
 					Conteudo: img.URL,
 				}
 				Save_ImgSexta(nova_img)
-				cooldowns[m.Author.ID] = time.Now()
 			}
-		} else if strings.Contains(m.Content, "attchments") {
-			// eh link
-			for img := range strings.SplitSeq(m.Content, " ") {
-				nova_img := Img_Sexta{
-					Autor:    m.Author.Username,
-					Conteudo: img,
-				}
-				Save_ImgSexta(nova_img)
-				cooldowns[m.Author.ID] = time.Now()
+			cooldowns[m.Author.ID] = time.Now()
+			s.ChannelMessageSend(m.ChannelID, "Recebido.")
+		} /* else if strings.Contains(m.Content, "attchments") {
+		// eh link
+		for img := range strings.SplitSeq(m.Content, " ") {
+			nova_img := Img_Sexta{
+				Autor:    m.Author.Username,
+				Conteudo: img,
 			}
+			Save_ImgSexta(nova_img)
+			cooldowns[m.Author.ID] = time.Now()
 		}
+		} */
 	}
 }
 
