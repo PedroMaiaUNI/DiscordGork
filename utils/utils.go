@@ -43,7 +43,9 @@ const (
 	filename    = "imagensSexta.json"
 	Comunicados = "919309611885015140"
 )
+
 var cooldowns = make(map[string]time.Time)
+
 // Do not disturb
 func Load_DND(path string) ([]string, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -174,13 +176,13 @@ func Save_WordCounter(path string, data map[string]WordStat) error {
 func Handler_ImgSexta(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.GuildID == "" {
 		if ultimaVez, ok := cooldowns[m.Author.ID]; ok {
-				// Calcula quanto tempo passou
-				tempoPassado := time.Since(ultimaVez)
-				
-				if tempoPassado < time.Hour {
-					s.ChannelMessageSend(m.ChannelID, "🖕, espere o cooldown de uma hora acabar fuleiro")
-					return
-				}
+			// Calcula quanto tempo passou
+			tempoPassado := time.Since(ultimaVez)
+
+			if tempoPassado < time.Hour {
+				s.ChannelMessageSend(m.ChannelID, "🖕, espere o cooldown de uma hora acabar fuleiro")
+				return
+			}
 		}
 		if m.Content == "" {
 			// eh anexo
@@ -228,6 +230,13 @@ func Load_ImgSexta(s *discordgo.Session) {
 	mensagem := "Imagem do dia" + " enviado por: " + imagemEscolhida.Autor
 	s.ChannelMessageSend(Comunicados, mensagem)
 	s.ChannelMessageSend(Comunicados, imagemEscolhida.Conteudo)
+	lista = append(lista[:index], lista[index+1:]...)
+	dadosEscrita, _ := json.MarshalIndent(lista, "", "  ")
+	err = os.WriteFile(filename, dadosEscrita, 0644)
+	if err != nil {
+		log.Printf("Erro ao atualizar arquivo após remoção: %v", err)
+	}
+
 }
 
 func Save_ImgSexta(img Img_Sexta) {
