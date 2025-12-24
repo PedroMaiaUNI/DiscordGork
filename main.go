@@ -40,6 +40,7 @@ var (
 		"918671270885851187":  true, //tonga
 		"828746329093177374":  true, //maia
 		"1235684622810222753": true, //ruan
+		"1452723817825964137" : true, //gork 2
 
 	}
 )
@@ -547,6 +548,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if !strings.HasPrefix(m.Content, "!") {
 		_ = mc.AddMessage(m.Content)
+		return
 	}
 
 	if atomic.AddInt64(&n_mensagens, 1) >= 200 || bot_mencionado(s, m) {
@@ -556,12 +558,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "!ping" {
 		s.ChannelMessageSend(m.ChannelID, "pong 🏓")
+		return
 	}
 
 	if m.Content == "!teste" {
 		if slices.Contains(permitidos, m.Author.ID) {
 			s.ChannelMessageSendReply(m.ChannelID, "oiiii", m.Reference())
 		}
+		return
 	}
 
 	if after, ok := strings.CutPrefix(m.Content, "!say "); ok {
@@ -571,10 +575,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		s.ChannelMessageSend(m.ChannelID, msg)
+		return
 	}
 
 	if m.Content == "!num" {
 		s.ChannelMessageSend(m.ChannelID, strconv.FormatInt(atomic.LoadInt64(&n_mensagens), 10))
+		return
 	}
 
 	if m.Content == "!tabela" {
@@ -584,18 +590,74 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	switch {
 	case strings.HasPrefix(m.Content, "!addfrase "):
 		handleAddFrase(s, m)
+		return
 
 	case strings.HasPrefix(m.Content, "!rmfrase "):
 		HandleRemoveFrase(s, m)
+		return
 
 	case strings.HasPrefix(m.Content, "!listfrases"):
 		HandleListFrases(s, m)
+		return
 
 	case m.Content == "!undo":
 		HandleUndo(s, m)
+		return
 
 	case m.Content == "!markov":
 		HandleMarkov(s, m)
+		return
+		
+	case strings.HasPrefix(m.Content, "!anime "):
+		termo := strings.TrimSpace(m.Content[len("!anime "):])
+		if termo == "" {
+			s.ChannelMessageSendReply(m.ChannelID, "Use: !anime <nome>", m.Reference())
+			return
+		}
+		title, link, err := utils.SearchMedia("ANIME", termo)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
+			return
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
+		return
+		
+	case strings.HasPrefix(m.Content, "!manga "):
+		termo := strings.TrimSpace(m.Content[len("!manga "):])
+		if termo == "" {
+			s.ChannelMessageSendReply(m.ChannelID, "Use: !manga <nome>", m.Reference())
+			return
+		}
+		title, link, err := utils.SearchMedia("MANGA", termo)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
+			return
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
+		return
+		
+	case strings.HasPrefix(m.Content, "!user "):
+		name := strings.TrimSpace(m.Content[len("!user "):])
+		if name == "" {
+			s.ChannelMessageSend(m.ChannelID, "Use: !user <nome>")
+			return
+		}
+		user, err := utils.GetUserProfile(name)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
+			return
+		}
+		embed := &discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("Perfil de %s", user.Name),
+			URL:         user.SiteUrl,
+			Description: user.About,
+			Color:       0x2E51A2,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: user.Avatar.Large,
+			},
+		}
+		s.ChannelMessageSendEmbed(m.ChannelID, embed)
+
 	}
 
 	if strings.Contains(m.Content, "!inf ") {
