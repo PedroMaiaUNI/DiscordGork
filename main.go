@@ -535,7 +535,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == "271218339311910912" && strings.Contains(m.Content, "mygo") {
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🧩")
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🦖")
-		return
+		//return
 	}
 	if slices.Contains(m.MentionRoles, CSGO) {
 		s.ChannelMessageSendReply(
@@ -543,12 +543,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			"OXALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \nhttps://cdn.discordapp.com/attachments/1319356140198428794/1365829109909028914/481771641_122126717024407019_8394426687156425162_n.png?ex=680ebafb&is=680d697b&hm=d51ae7095668e9fa508ff67fb69ab4923f34dba30b2658cdd802e5f0d20e1062&",
 			m.Reference(),
 		)
-		return
+		//return
 	}
 
 	if !strings.HasPrefix(m.Content, "!") {
 		_ = mc.AddMessage(m.Content)
-		return
+		//return
 	}
 
 	if atomic.AddInt64(&n_mensagens, 1) >= 200 || bot_mencionado(s, m) {
