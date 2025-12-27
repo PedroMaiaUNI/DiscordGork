@@ -540,7 +540,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if slices.Contains(m.MentionRoles, CSGO) {
 		s.ChannelMessageSendReply(
 			m.ChannelID,
-			"OXALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \nhttps://cdn.discordapp.com/attachments/1319356140198428794/1365829109909028914/481771641_122126717024407019_8394426687156425162_n.png?ex=680ebafb&is=680d697b&hm=d51ae7095668e9fa508ff67fb69ab4923f34dba30b2658cdd802e5f0d20e1062&",
+			"OXALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \nhttps://cdn.discordapp.com/attachments/1362454934997696642/1450575623914524702/ezgif-6-96d301a97c.gif?ex=69503853&is=694ee6d3&hm=06c1b8ddb2bd15206188ced55cf404b74d68b881d18b03e7aa7993951b169ca0&",
 			m.Reference(),
 		)
 		return
