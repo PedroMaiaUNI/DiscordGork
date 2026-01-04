@@ -72,6 +72,18 @@ const (
 	url = "https://graphql.anilist.co"
 )
 
+//
+
+type AniUserResponse struct {
+	Data struct {
+		Viewer struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		} `json:"Viewer"`
+	} `json:"data"`
+}
+
+// ----------------------------------------------------------funcoes de post pro anilist
 func Query_AniList(query string, variables map[string]any) ([]byte, error) {
 	// aqui cria um hashmap pra guardar query e variaveis
 	body := map[string]any{
@@ -168,4 +180,29 @@ func GetUserProfile(name string) (*userItem, error) {
 		return nil, fmt.Errorf("usuário %q não encontrado", name)
 	}
 	return &resp.Data.User, nil
+}
+
+//
+//
+
+func GetAniListUser(token string) (string, error) {
+	jsonData := map[string]string{
+		"query": "{ Viewer { id name } }",
+	}
+	body, _ := json.Marshal(jsonData)
+
+	req, _ := http.NewRequest("POST", "https://graphql.anilist.co", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result AniUserResponse
+	json.NewDecoder(resp.Body).Decode(&result)
+	return result.Data.Viewer.Name, nil
 }

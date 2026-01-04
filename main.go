@@ -19,7 +19,9 @@ import (
 	// "io"
 	"bot/markov"
 	"bot/utils"
+	"context"
 	"github.com/robfig/cron/v3"
+	"golang.org/x/oauth2"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -52,6 +54,73 @@ const (
 	PALAVRA_MONITORADA = "hitler"
 	Tonga              = "918671270885851187"
 )
+
+var commands = []*discordgo.ApplicationCommand{
+	{
+		Name:        "anilist-login",
+		Description: "Gera o link para vincular sua conta AniList",
+	},
+	{
+		Name:        "anilist-auth",
+		Description: "Finaliza o login usando o código PIN",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionString,
+				Name:        "pin",
+				Description: "O código PIN fornecido pelo AniList",
+				Required:    true,
+			},
+		},
+	},
+}
+
+func interactionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if i.Type != discordgo.InteractionApplicationCommand {
+		return
+	}
+
+	data := i.ApplicationCommandData()
+
+	switch data.Name {
+	case "anilist-login":
+		url := aniListConfig.AuthCodeURL(i.Member.User.ID)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "🔗 **Vincule sua conta AniList**\n\n1. [Clique aqui para autorizar](" + url + ")\n2. Copie o código PIN que aparecerá.\n3. Use o comando `/anilist-auth pin: SEU_CODIGO`.",
+				Flags:   discordgo.MessageFlagsEphemeral, // Só o usuário vê
+			},
+		})
+
+	case "anilist-auth":
+		pin := data.Options[0].StringValue()
+
+		// Troca o PIN pelo Token Real
+		token, err := aniListConfig.Exchange(context.Background(), pin)
+		//fmt.Print(token)
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ Erro ao validar o PIN. Verifique se copiou corretamente.",
+				},
+			})
+			return
+		}
+
+		// TODO: Salvar token.AccessToken associado ao i.Member.User.ID no seu Banco de Dados ou Gist
+		//log.Printf("Usuário %s logado com sucesso!", i.Member.User.Username)
+		
+		// Pega o nome do usuário no AniList para confirmar
+		aniName, _ := utils.GetAniListUser(token.AccessToken)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprint("✅ **Sucesso!** Sua conta AniList foi vinculada ao bot, ", aniName + "."),
+			},
+		})
+	}
+}
 
 func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	if g.Guild.Unavailable {
@@ -467,15 +536,22 @@ func HandlePalavraMonitorada(s *discordgo.Session, m *discordgo.MessageCreate, p
 	)
 }
 
+var _ = godotenv.Load()
+var token = os.Getenv("TOKEN")
+
+var aniListConfig = &oauth2.Config{
+	ClientID:     os.Getenv("ANILIST_ID"),
+	ClientSecret: os.Getenv("ANILIST_SECRET"),
+	RedirectURL:  "https://anilist.co/api/v2/oauth/pin",
+	Endpoint: oauth2.Endpoint{
+		AuthURL:  "https://anilist.co/api/v2/oauth/authorize",
+		TokenURL: "https://anilist.co/api/v2/oauth/token",
+	},
+}
+
 func main() {
-	_ = godotenv.Load()
-
-	token := os.Getenv("TOKEN")
 	CSGO = os.Getenv("CARGO_CSGO")
-	if token == "" {
-		log.Fatal("TOKEN ausente")
-	}
-
+	
 	// 🔹 Load inicial do Gist (UMA VEZ)
 	frases, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
@@ -511,12 +587,45 @@ func main() {
 
 	fmt.Println("Bot online 🚀")
 	go iniciarAgendador(dg)
+
+	// suporte pra slash commands
+	for _, v := range commands {
+		_, err := dg.ApplicationCommandCreate(dg.State.User.ID, "", v)
+		if err != nil {
+			log.Panicf("Não foi possível criar o comando '%v': %v", v.Name, err)
+		}
+	}
+	dg.AddHandler(interactionCreate)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
 	dg.Close()
 }
+func loginCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// Geramos a URL. O parâmetro 'state' pode ser o ID do usuário para segurança extra.
+	url := aniListConfig.AuthCodeURL(m.Author.ID)
 
+	msg := fmt.Sprintf("Para conectar sua conta:\n1. Clique aqui: %s\n2. Autorize o bot\n3. Copie o código gerado e use o comando `/auth <codigo>`", url)
+	s.ChannelMessageSend(m.ChannelID, msg)
+}
+
+func authCommand(s *discordgo.Session, m *discordgo.MessageCreate, code string) {
+	// 1. Troca o código (PIN) pelo token de acesso
+	token, err := aniListConfig.Exchange(context.Background(), code)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "❌ Erro ao validar o código. Verifique se ele está correto.")
+		return
+	}
+
+	// 2. Agora você tem o AccessToken!
+	// IMPORTANTE: Salve 'token.AccessToken' no seu banco de dados vinculado ao ID do usuário.
+	fmt.Printf("Token do usuário %s: %s\n", m.Author.ID, token.AccessToken)
+
+	// Opcional: Salve também o RefreshToken se quiser que o login dure "para sempre"
+	// saveUserToken(m.Author.ID, token)
+
+	s.ChannelMessageSend(m.ChannelID, "✅ Sucesso! Sua conta AniList foi vinculada.")
+}
 func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	for _, user := range m.Mentions {
 		if user.ID == s.State.User.ID {

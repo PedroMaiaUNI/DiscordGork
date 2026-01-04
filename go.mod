@@ -6,6 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/joho/godotenv v1.5.1
 	github.com/robfig/cron/v3 v3.0.1
+	golang.org/x/oauth2 v0.34.0
 	golang.org/x/text v0.3.3
 )
 
