@@ -83,6 +83,11 @@ type AniUserResponse struct {
 	} `json:"data"`
 }
 
+type UserToken struct {
+	AccessToken string `json:"access_token"`
+	AniName     string `json:"ani_name"`
+}
+
 // ----------------------------------------------------------funcoes de post pro anilist
 func Query_AniList(query string, variables map[string]any) ([]byte, error) {
 	// aqui cria um hashmap pra guardar query e variaveis

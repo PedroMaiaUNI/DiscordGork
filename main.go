@@ -14,7 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 
-	//"enconding/json"
+	"encoding/json"
 	//"http"
 	// "io"
 	"bot/markov"
@@ -46,6 +46,9 @@ var (
 
 	}
 	gist_carregado bool = true
+	tokensCache         = make(map[string]utils.UserToken)
+	tokensMu       sync.RWMutex
+	TOKENS_PATH    = "tokens.json"
 )
 
 const (
@@ -74,6 +77,23 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 }
 
+// Tokens do anilist
+func loadTokens() {
+	data, err := os.ReadFile(TOKENS_PATH)
+	if err != nil {
+		return
+	}
+	tokensMu.Lock()
+	json.Unmarshal(data, &tokensCache)
+	tokensMu.Unlock()
+}
+
+func saveTokens() {
+	tokensMu.RLock()
+	data, _ := json.MarshalIndent(tokensCache, "", "  ")
+	tokensMu.RUnlock()
+	_ = os.WriteFile(TOKENS_PATH, data, 0644)
+}
 func interactionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Type != discordgo.InteractionApplicationCommand {
 		return
@@ -110,13 +130,21 @@ func interactionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		// TODO: Salvar token.AccessToken associado ao i.Member.User.ID no seu Banco de Dados ou Gist
 		//log.Printf("Usuário %s logado com sucesso!", i.Member.User.Username)
-		
+
 		// Pega o nome do usuário no AniList para confirmar
 		aniName, _ := utils.GetAniListUser(token.AccessToken)
+		// SALVANDO NO ARQUIVO
+		tokensMu.Lock()
+		tokensCache[i.Member.User.ID] = utils.UserToken{
+			AccessToken: token.AccessToken,
+			AniName:     aniName,
+		}
+		tokensMu.Unlock()
+		saveTokens()
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprint("✅ **Sucesso!** Sua conta AniList foi vinculada ao bot, ", aniName + "."),
+				Content: fmt.Sprint("✅ **Sucesso!** Sua conta AniList foi vinculada ao bot, ", aniName+"."),
 			},
 		})
 	}
@@ -551,7 +579,7 @@ var aniListConfig = &oauth2.Config{
 
 func main() {
 	CSGO = os.Getenv("CARGO_CSGO")
-	
+
 	// 🔹 Load inicial do Gist (UMA VEZ)
 	frases, err := utils.Load_Gist(
 		os.Getenv("GIST_ID"),
@@ -578,7 +606,8 @@ func main() {
 
 	Emojis, _ = dg.GuildEmojis(Tonga)
 	Emojis = append(Emojis, &discordgo.Emoji{Name: "🫃"})
-
+	loadTokens() 
+    fmt.Println("Tokens de usuários carregados:", len(tokensCache))
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(guildCreate)
 	if err := dg.Open(); err != nil {
@@ -602,7 +631,7 @@ func main() {
 	dg.Close()
 }
 func loginCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Geramos a URL. O parâmetro 'state' pode ser o ID do usuário para segurança extra.
+	
 	url := aniListConfig.AuthCodeURL(m.Author.ID)
 
 	msg := fmt.Sprintf("Para conectar sua conta:\n1. Clique aqui: %s\n2. Autorize o bot\n3. Copie o código gerado e use o comando `/auth <codigo>`", url)
@@ -610,19 +639,16 @@ func loginCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func authCommand(s *discordgo.Session, m *discordgo.MessageCreate, code string) {
-	// 1. Troca o código (PIN) pelo token de acesso
+	
 	token, err := aniListConfig.Exchange(context.Background(), code)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, "❌ Erro ao validar o código. Verifique se ele está correto.")
 		return
 	}
 
-	// 2. Agora você tem o AccessToken!
-	// IMPORTANTE: Salve 'token.AccessToken' no seu banco de dados vinculado ao ID do usuário.
 	fmt.Printf("Token do usuário %s: %s\n", m.Author.ID, token.AccessToken)
 
-	// Opcional: Salve também o RefreshToken se quiser que o login dure "para sempre"
-	// saveUserToken(m.Author.ID, token)
+	
 
 	s.ChannelMessageSend(m.ChannelID, "✅ Sucesso! Sua conta AniList foi vinculada.")
 }
