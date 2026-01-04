@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 	"sort"
+	"time"
 )
 
 const (
-	BackupDir = "backups"
+	BackupDir   = "backups"
 	Max_Backups = 3
 )
+
 func BackupFrases(frases []Frase) error {
 	if err := os.MkdirAll(BackupDir, 0755); err != nil {
 		return err
@@ -61,7 +62,6 @@ func LoadLastBackup() ([]Frase, error) {
 
 	return frases, nil
 }
-
 
 func cleanupOldBackups() error {
 	files, err := filepath.Glob(filepath.Join(BackupDir, "frases_*.json"))

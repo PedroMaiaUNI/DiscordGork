@@ -40,9 +40,10 @@ var (
 		"918671270885851187":  true, //tonga
 		"828746329093177374":  true, //maia
 		"1235684622810222753": true, //ruan
-		"1452723817825964137" : true, //gork 2
+		"1452723817825964137": true, //gork 2
 
 	}
+	gist_carregado bool = true
 )
 
 const (
@@ -482,7 +483,8 @@ func main() {
 		os.Getenv("GITHUB_TOKEN"),
 	)
 	if err != nil {
-		log.Fatal("Erro ao carregar Gist:", err)
+		log.Print("Erro ao carregar Gist. Funções de frases serão desabilitadas até prox. boot.\n", err)
+		gist_carregado = false
 	}
 	frasesCache = frases
 	fmt.Println("Frases carregadas:", len(frasesCache))
@@ -589,25 +591,33 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch {
 	case strings.HasPrefix(m.Content, "!addfrase "):
-		handleAddFrase(s, m)
+		if gist_carregado {
+			handleAddFrase(s, m)
+		}
 		return
 
 	case strings.HasPrefix(m.Content, "!rmfrase "):
-		HandleRemoveFrase(s, m)
+		if gist_carregado {
+			HandleRemoveFrase(s, m)
+		}
 		return
 
 	case strings.HasPrefix(m.Content, "!listfrases"):
-		HandleListFrases(s, m)
+		if gist_carregado {
+			HandleListFrases(s, m)
+		}
 		return
 
 	case m.Content == "!undo":
-		HandleUndo(s, m)
+		if gist_carregado {
+			HandleUndo(s, m)
+		}
 		return
 
 	case m.Content == "!markov":
 		HandleMarkov(s, m)
 		return
-		
+
 	case strings.HasPrefix(m.Content, "!anime "):
 		termo := strings.TrimSpace(m.Content[len("!anime "):])
 		if termo == "" {
@@ -621,7 +631,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
 		return
-		
+
 	case strings.HasPrefix(m.Content, "!manga "):
 		termo := strings.TrimSpace(m.Content[len("!manga "):])
 		if termo == "" {
@@ -635,7 +645,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
 		return
-		
+
 	case strings.HasPrefix(m.Content, "!user "):
 		name := strings.TrimSpace(m.Content[len("!user "):])
 		if name == "" {
