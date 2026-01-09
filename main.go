@@ -606,8 +606,8 @@ func main() {
 
 	Emojis, _ = dg.GuildEmojis(Tonga)
 	Emojis = append(Emojis, &discordgo.Emoji{Name: "🫃"})
-	loadTokens() 
-    fmt.Println("Tokens de usuários carregados:", len(tokensCache))
+	loadTokens()
+	fmt.Println("Tokens de usuários carregados:", len(tokensCache))
 	dg.AddHandler(messageCreate)
 	dg.AddHandler(guildCreate)
 	if err := dg.Open(); err != nil {
@@ -631,7 +631,7 @@ func main() {
 	dg.Close()
 }
 func loginCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	
+
 	url := aniListConfig.AuthCodeURL(m.Author.ID)
 
 	msg := fmt.Sprintf("Para conectar sua conta:\n1. Clique aqui: %s\n2. Autorize o bot\n3. Copie o código gerado e use o comando `/auth <codigo>`", url)
@@ -639,7 +639,7 @@ func loginCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func authCommand(s *discordgo.Session, m *discordgo.MessageCreate, code string) {
-	
+
 	token, err := aniListConfig.Exchange(context.Background(), code)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, "❌ Erro ao validar o código. Verifique se ele está correto.")
@@ -648,10 +648,9 @@ func authCommand(s *discordgo.Session, m *discordgo.MessageCreate, code string) 
 
 	fmt.Printf("Token do usuário %s: %s\n", m.Author.ID, token.AccessToken)
 
-	
-
 	s.ChannelMessageSend(m.ChannelID, "✅ Sucesso! Sua conta AniList foi vinculada.")
 }
+
 func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 	for _, user := range m.Mentions {
 		if user.ID == s.State.User.ID {
@@ -759,12 +758,93 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSendReply(m.ChannelID, "Use: !anime <nome>", m.Reference())
 			return
 		}
-		title, link, err := utils.SearchMedia("ANIME", termo)
+
+		// 1. Tenta pegar o token do usuário (se estiver logado)
+		var userToken string
+		tokensMu.RLock() // Bloqueio de leitura para thread-safety
+		if val, ok := tokensCache[m.Author.ID]; ok {
+			userToken = val.AccessToken
+		}
+		tokensMu.RUnlock()
+
+		// 2. Faz a busca usando o token (se tiver)
+		media, err := utils.SearchMedia("ANIME", termo, userToken)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
 			return
 		}
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
+
+		// 3. Converte cor Hex do AniList
+		color := 0x00ff00 // Verde padrão
+
+		// 4. Monta o Embed
+		embed := &discordgo.MessageEmbed{
+			Title:       media.Title.Romaji,
+			URL:         media.SiteUrl,
+			Description: utils.CleanDescription(media.Description),
+			Color:       color,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: media.CoverImage.Large,
+			},
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "⭐ Nota Média",
+					Value:  fmt.Sprintf("%d%%", media.AverageScore),
+					Inline: true,
+				},
+				{
+					Name:   "📺 Episódios",
+					Value:  fmt.Sprintf("%d", media.Episodes),
+					Inline: true,
+				},
+			},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "Fonte: AniList",
+			},
+		}
+		genresStr := "N/A"
+		if len(media.Genres) > 0 {
+			genresStr = strings.Join(media.Genres, ", ")
+		}
+		// 5. SE o usuário estiver logado e tiver dados na lista, adiciona o campo extra!
+		if media.MediaListEntry != nil {
+			statusEmoji := "📺"
+			switch media.MediaListEntry.Status {
+			case "COMPLETED":
+				statusEmoji = "✅"
+			case "PLANNING":
+				statusEmoji = "📅"
+			case "DROPPED":
+				statusEmoji = "🗑️"
+			}
+
+			userField := fmt.Sprintf(
+				"%s **Status:** %s\n🏁 **Progresso:** %d/%d\n🏅 **Sua Nota:** %.1f",
+				statusEmoji,
+				media.MediaListEntry.Status,
+				media.MediaListEntry.Progress,
+				media.Episodes,
+				media.MediaListEntry.Score,
+			)
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🎭 Gêneros",
+				Value:  genresStr,
+				Inline: false,
+			})
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "👤 Seus Dados",
+				Value:  userField,
+				Inline: false, // Ocupa a linha toda para destaque
+			})
+		} else if userToken != "" {
+			// Logado, mas não está na lista
+			embed.Footer.Text += " • Você não tem este anime na sua lista."
+		} else {
+			// Não logado
+			embed.Footer.Text += " • Use /anilist-login para ver seu progresso aqui!"
+		}
+
+		s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		return
 
 	case strings.HasPrefix(m.Content, "!manga "):
@@ -773,12 +853,92 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSendReply(m.ChannelID, "Use: !manga <nome>", m.Reference())
 			return
 		}
-		title, link, err := utils.SearchMedia("MANGA", termo)
+
+		// 1. Tenta pegar o token do usuário (se estiver logado)
+		var userToken string
+		tokensMu.RLock() // Bloqueio de leitura para thread-safety
+		if val, ok := tokensCache[m.Author.ID]; ok {
+			userToken = val.AccessToken
+		}
+		tokensMu.RUnlock()
+
+		// 2. Faz a busca usando o token (se tiver)
+		media, err := utils.SearchMedia("MANGA", termo, userToken)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
 			return
 		}
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("**%s**: %s", title, link))
+
+		color := 0x9D00FF // Roxo
+
+		// 4. Monta o Embed
+		embed := &discordgo.MessageEmbed{
+			Title:       media.Title.Romaji,
+			URL:         media.SiteUrl,
+			Description: utils.CleanDescription(media.Description),
+			Color:       color,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: media.CoverImage.Large,
+			},
+			Fields: []*discordgo.MessageEmbedField{
+				{
+					Name:   "⭐ Nota Média",
+					Value:  fmt.Sprintf("%d%%", media.AverageScore),
+					Inline: true,
+				},
+				{
+					Name:   "📖 Capítulos",
+					Value:  fmt.Sprintf("%d", media.Chapters),
+					Inline: true,
+				},
+			},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "Fonte: AniList",
+			},
+		}
+		genresStr := "N/A"
+		if len(media.Genres) > 0 {
+			genresStr = strings.Join(media.Genres, ", ")
+		}
+		// 5. SE o usuário estiver logado e tiver dados na lista, adiciona o campo extra!
+		if media.MediaListEntry != nil {
+			statusEmoji := "📺"
+			switch media.MediaListEntry.Status {
+			case "COMPLETED":
+				statusEmoji = "✅"
+			case "PLANNING":
+				statusEmoji = "📅"
+			case "DROPPED":
+				statusEmoji = "🗑️"
+			}
+
+			userField := fmt.Sprintf(
+				"%s **Status:** %s\n🏁 **Progresso:** %d/%d\n🏅 **Sua Nota:** %.1f",
+				statusEmoji,
+				media.MediaListEntry.Status,
+				media.MediaListEntry.Progress,
+				media.Chapters,
+				media.MediaListEntry.Score,
+			)
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🎭 Gêneros",
+				Value:  genresStr,
+				Inline: false,
+			})
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "👤 Seus Dados",
+				Value:  userField,
+				Inline: false, // Ocupa a linha toda para destaque
+			})
+		} else if userToken != "" {
+			// Logado, mas não está na lista
+			embed.Footer.Text += " • Você não tem este anime na sua lista."
+		} else {
+			// Não logado
+			embed.Footer.Text += " • Use /anilist-login para ver seu progresso aqui!"
+		}
+
+		s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		return
 
 	case strings.HasPrefix(m.Content, "!user "):
@@ -792,6 +952,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, "Erro: "+err.Error())
 			return
 		}
+
 		embed := &discordgo.MessageEmbed{
 			Title:       fmt.Sprintf("Perfil de %s", user.Name),
 			URL:         user.SiteUrl,

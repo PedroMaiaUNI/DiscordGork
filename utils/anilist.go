@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // structs para resposta GraphQL de media (anime/manga)
@@ -88,6 +89,35 @@ type UserToken struct {
 	AniName     string `json:"ani_name"`
 }
 
+// -----------------------------------------------structs pro embed
+type MediaListEntry struct {
+	Status   string  `json:"status"`
+	Score    float64 `json:"score"`
+	Progress int     `json:"progress"`
+}
+
+type MediaDetailed struct {
+	ID          int        `json:"id"`
+	Title       mediaTitle `json:"title"`
+	Genres      []string   `json:"genres"`
+	Description string     `json:"description"`
+	CoverImage  struct {
+		Large string `json:"large"`
+		Color string `json:"color"`
+	} `json:"coverImage"`
+	AverageScore   int             `json:"averageScore"`
+	Episodes       int             `json:"episodes"` // ou Chapters para manga
+	Chapters       int             `jason:"chapters"`
+	SiteUrl        string          `json:"siteUrl"`
+	MediaListEntry *MediaListEntry `json:"mediaListEntry"` // Null se não logado
+}
+
+type mediaDetailedResponse struct {
+	Data struct {
+		Media MediaDetailed `json:"Media"`
+	} `json:"data"`
+}
+
 // ----------------------------------------------------------funcoes de post pro anilist
 func Query_AniList(query string, variables map[string]any) ([]byte, error) {
 	// aqui cria um hashmap pra guardar query e variaveis
@@ -115,45 +145,77 @@ func Query_AniList(query string, variables map[string]any) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func SearchMedia(mediaType, search string) (title, link string, err error) {
+func SearchMedia(mediaType, search, token string) (*MediaDetailed, error) {
 	query := `
-		query ($id: Int, $page: Int, $perPage: Int, $search: String) {
-		  Page (page: $page, perPage: $perPage) {
-			media (id: $id, search: $search, type: ` + mediaType + `) {
-			  id
-			  title {
-				romaji
-			  }
-			}
-		  }
-		}
-		`
+    query ($search: String, $type: MediaType) {
+      Media(search: $search, type: $type) {
+        id
+        title { romaji }
+        genres
+        description(asHtml: false) 
+        coverImage { large color }
+        averageScore
+        episodes
+        chapters
+        siteUrl
+        mediaListEntry {
+            status
+            score
+            progress
+        }
+      }
+    }
+    `
 	vars := map[string]any{
-		"search":  search,
-		"page":    1,
-		"perPage": 3,
+		"search": search,
+		"type":   mediaType,
 	}
-	b, err := Query_AniList(query, vars)
+
+	// Prepara o JSON
+	bodyMap := map[string]any{"query": query, "variables": vars}
+	bodyBytes, _ := json.Marshal(bodyMap)
+
+	req, _ := http.NewRequest("POST", "https://graphql.anilist.co", bytes.NewBuffer(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+
+	// SE tiver token, adiciona no header. O AniList usa isso para preencher o 'mediaListEntry'
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
-	var resp mediaResponse
-	if err := json.Unmarshal(b, &resp); err != nil {
-		return "", "", err
-	}
-	if len(resp.Data.Page.Media) == 0 {
-		return "", "", fmt.Errorf("nenhum resultado para %q", search)
-	}
-	m := resp.Data.Page.Media[0]
-	title = m.Title.Romaji
-	if mediaType == "ANIME" {
-		link = fmt.Sprintf("https://anilist.co/anime/%d/", m.ID)
-	} else {
-		link = fmt.Sprintf("https://anilist.co/manga/%d/", m.ID)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("erro API: %d", resp.StatusCode)
 	}
 
-	return title, link, nil
+	var result mediaDetailedResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
 
+	if result.Data.Media.ID == 0 {
+		return nil, fmt.Errorf("nenhum resultado encontrado")
+	}
+
+	return &result.Data.Media, nil
+}
+
+// Função auxiliar para limpar a descrição (HTML -> Texto simples)
+func CleanDescription(desc string) string {
+	desc = strings.ReplaceAll(desc, "<br>", "\n")
+	desc = strings.ReplaceAll(desc, "<i>", "*")
+	desc = strings.ReplaceAll(desc, "</i>", "*")
+	// Limita tamanho para não quebrar o Discord (max 4096, mas vamos por segurança em 300)
+	if len(desc) > 300 {
+		return desc[:300] + "..."
+	}
+	return desc
 }
 func GetUserProfile(name string) (*userItem, error) {
 	query := `
