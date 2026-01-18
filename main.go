@@ -99,6 +99,23 @@ func iniciarAgendador(s *discordgo.Session) {
 	c.Start()
 }
 
+func baobaoAgendador(s *discordgo.Session) {
+	
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
+	c := cron.New(cron.WithLocation(loc))
+
+	_, err := c.AddFunc("0 20 * * *", func() {
+		
+		utils.BaoBao(s)
+	})
+
+	if err != nil {
+		return
+	}
+
+	c.Start()
+}
+
 func handleAddFrase(s *discordgo.Session, m *discordgo.MessageCreate) {
 	msg := strings.TrimSpace(strings.TrimPrefix(m.Content, "!addfrase"))
 	if msg == "" || strings.Contains(msg, "@everyone") {
@@ -511,6 +528,7 @@ func main() {
 
 	fmt.Println("Bot online 🚀")
 	go iniciarAgendador(dg)
+	go baobaoAgendador(dg)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
