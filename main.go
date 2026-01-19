@@ -104,7 +104,7 @@ func baobaoAgendador(s *discordgo.Session) {
 	loc, _ := time.LoadLocation("America/Sao_Paulo")
 	c := cron.New(cron.WithLocation(loc))
 
-	_, err := c.AddFunc("0 20 * * *", func() {
+	_, err := c.AddFunc("0 07 * * *", func() {
 		
 		utils.BaoBao(s)
 	})
