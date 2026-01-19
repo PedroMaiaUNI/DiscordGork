@@ -27,7 +27,7 @@ func BaoBao(s *discordgo.Session) {
 	if len(links) > 0 {
 		index := rand.Intn(len(links))
 		msg := "Daily baobao: " + links[index]
-		s.ChannelMessageSend("1450181687119184014", msg)
+		s.ChannelMessageSend(Comunicados, msg)
 		links = append(links[:index], links[index+1:]...)
 		dadosEscrita, _ := json.MarshalIndent(links, "", "  ")
 		err = os.WriteFile(filename, dadosEscrita, 0644)
