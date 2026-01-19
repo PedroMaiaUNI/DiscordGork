@@ -29,6 +29,11 @@ func BaoBao(s *discordgo.Session) {
 		msg := "Daily baobao: " + links[index]
 		s.ChannelMessageSend("1450181687119184014", msg)
 		links = append(links[:index], links[index+1:]...)
+		dadosEscrita, _ := json.MarshalIndent(links, "", "  ")
+		err = os.WriteFile(filename, dadosEscrita, 0644)
+		if err != nil {
+			fmt.Printf("Erro ao atualizar arquivo após remoção: %v", err)
+		}
 		return
 	} else {
 		fmt.Println("sem conteudo")

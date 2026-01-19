@@ -47,7 +47,7 @@ const (
 var cooldowns = make(map[string]time.Time)
 
 // Do not disturb
-func Load_DND(path string) ([]string, error) {
+/* func Load_DND(path string) ([]string, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return []string{}, nil
 	}
@@ -74,7 +74,7 @@ func Save_DND(path string, data []string) error {
 
 	return os.WriteFile(path, bytes, 0644)
 }
-
+*/
 // REDACTED
 func Remover_Acentos(s string) string {
 	t := norm.NFD.String(s)
