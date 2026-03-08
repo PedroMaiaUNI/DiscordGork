@@ -369,7 +369,7 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if !strings.Contains(content, "https://x.com/") &&
 		!strings.Contains(content, "https://twitter.com/") &&
 		!strings.Contains(content, "https://instagram.com/") &&
-		!strings.Contains(content, "https://www.instagram.com/p") ||
+		!strings.Contains(content, "https://www.instagram.com/p") &&
 	 	!strings.Contains(content, "https://www.instagram.com/reel"){
 		return
 	}
