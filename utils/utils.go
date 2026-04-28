@@ -371,7 +371,7 @@ var (
 
 func fixLink(link string) (string, bool) {
 	// Ignora já corrigidos
-	if strings.Contains(link, "fixvx.com") || strings.Contains(link, "vxinstagram.com") || strings.Contains(link, "phixiv.net"){
+	if strings.Contains(link, "fixvx.com")||strings.Contains(link, "vxtwitter.com") || strings.Contains(link, "vxinstagram.com") || strings.Contains(link, "phixiv.net"){
 		return "", false
 	}
 
