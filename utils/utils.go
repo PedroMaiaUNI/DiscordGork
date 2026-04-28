@@ -41,7 +41,7 @@ type Img_Sexta struct {
 
 const (
 	filename    = "imagensSexta.json"
-	Comunicados = "919309611885015140"
+	Comunicados = "1494165588120178798"
 )
 
 var cooldowns = make(map[string]time.Time)
@@ -361,59 +361,77 @@ func Update_Gist(gistID string, filename string, token string, frases []Frase) e
 }
 
 // conserta os embedding
+var (
+	reAllLinks       = regexp.MustCompile(`https?://[^\s]+`)
+	reTwitter        = regexp.MustCompile(`https://(x|twitter)\.com/`)
+	reInstagramBase  = regexp.MustCompile(`https://(www\.)?instagram\.com/`)
+	reInstagramClean = regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/?]+)/?`)
+)
+
+func fixLink(link string) (string, bool) {
+	// Ignora já corrigidos
+	if strings.Contains(link, "fixvx.com") || strings.Contains(link, "vxinstagram.com") {
+		return "", false
+	}
+
+	// Twitter / X
+	if strings.Contains(link, "x.com") || strings.Contains(link, "twitter.com") {
+		fixed := reTwitter.ReplaceAllString(link, "https://fixvx.com/")
+		return fixed, true
+	}
+
+	// Instagram
+	if strings.Contains(link, "instagram.com") {
+		fixed := reInstagramBase.ReplaceAllString(link, "https://www.vxinstagram.com/")
+		fixed = reInstagramClean.ReplaceAllString(fixed, `$1/`)
+		return fixed, true
+	}
+
+	return "", false
+}
 
 func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	content := m.Content
 
-	// Detecta links monitorados
-	if !strings.Contains(content, "https://x.com/") &&
-		!strings.Contains(content, "https://twitter.com/") &&
-		!strings.Contains(content, "https://instagram.com/") &&
-		!strings.Contains(content, "https://www.instagram.com/p") &&
-	 	!strings.Contains(content, "https://www.instagram.com/reel"){
+	// Pega todos os links da mensagem
+	links := reAllLinks.FindAllString(content, -1)
+	if len(links) == 0 {
 		return
 	}
 
-	msg := content
-	autor := m.Author.Username
+	var fixedLinks []string
 
-	// Twitter / X
-	if strings.Contains(content, "https://x.com/") {
-		re := regexp.MustCompile(`https://x\.com/`)
-		msg = re.ReplaceAllString(msg, "https://fixvx.com/")
-	} else if strings.Contains(content, "https://twitter.com/") {
-		re := regexp.MustCompile(`https://twitter\.com/`)
-		msg = re.ReplaceAllString(msg, "https://fixvx.com/")
-	} else {
-		// Instagram
-		reBase := regexp.MustCompile(`https://(www\.)?instagram\.com/`)
-		msg = reBase.ReplaceAllString(msg, "https://www.vxinstagram.com/")
-
-		// Remove parâmetros extras (reel / p)
-		reClean := regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/]+)/?.*`)
-		msg = reClean.ReplaceAllString(msg, `$1/`)
+	for _, link := range links {
+		if fixed, ok := fixLink(link); ok {
+			fixedLinks = append(fixedLinks, fixed)
+		}
 	}
 
-	// Apaga mensagem original
-	err := s.ChannelMessageDelete(m.ChannelID, m.ID)
-	if err != nil {
-		log.Println("Erro ao deletar mensagem:", err)
+	if len(fixedLinks) == 0 {
 		return
 	}
 
-	// Reenvia mensagem corrigida
-	_, err = s.ChannelMessageSend(
-		m.ChannelID,
-		fmt.Sprintf(
-			"Mensagem enviada por **%s**\n%s",
-			autor,
-			msg,
-		),
-	)
+	// Suprime embed da mensagem original
+	flags := discordgo.MessageFlagsSuppressEmbeds
+	_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Channel: m.ChannelID,
+		ID:      m.ID,
+		Flags:   flags,
+	})
 	if err != nil {
-		log.Println("Erro ao reenviar mensagem:", err)
+		log.Println("Erro ao suprimir embed:", err)
 	}
+
+	// Envia apenas os links corrigidos
+	msg := strings.Join(fixedLinks, "\n")
+
+	_, err = s.ChannelMessageSend(m.ChannelID, msg)
+	if err != nil {
+		log.Println("Erro ao enviar mensagem:", err)
+	}
+
 }
+
 func EmojiToReaction(e discordgo.Emoji) string {
 	if e.ID != "" {
 		// emoji de guilda

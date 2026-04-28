@@ -28,7 +28,7 @@ import (
 var (
 	n_mensagens        int64   = 195
 	permitidos                 = []string{"332298877665411084", "703322022494732303", "271218339311910912", "981279055414456341", "205508002394931200", "274615835019051008", "515989133840351242"}
-	midiacast          string  = "31/12/2025 às 23:59"
+	midiacast          string  = "NÃO TEREMOS MAIS MIDIACAST"
 	inf                float64 = 0.99
 	mc                 *markov.MarkovChain
 	CSGO               string
@@ -41,6 +41,7 @@ var (
 		"828746329093177374":  true, //maia
 		"1235684622810222753": true, //ruan
 		"1452723817825964137": true, //gork 2
+		"1126363442652123167": true, //normal dimension
 
 	}
 	gist_carregado bool = true
@@ -90,23 +91,6 @@ func iniciarAgendador(s *discordgo.Session) {
 
 	_, err := c.AddFunc("0 13 * * *", func() {
 		utils.Load_ImgSexta(s)
-	})
-
-	if err != nil {
-		return
-	}
-
-	c.Start()
-}
-
-func baobaoAgendador(s *discordgo.Session) {
-	
-	loc, _ := time.LoadLocation("America/Sao_Paulo")
-	c := cron.New(cron.WithLocation(loc))
-
-	_, err := c.AddFunc("0 07 * * *", func() {
-		
-		utils.BaoBao(s)
 	})
 
 	if err != nil {
@@ -528,7 +512,7 @@ func main() {
 
 	fmt.Println("Bot online 🚀")
 	go iniciarAgendador(dg)
-	go baobaoAgendador(dg)
+	
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
