@@ -366,11 +366,12 @@ var (
 	reTwitter        = regexp.MustCompile(`https://(x|twitter)\.com/`)
 	reInstagramBase  = regexp.MustCompile(`https://(www\.)?instagram\.com/`)
 	reInstagramClean = regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/?]+)/?`)
+	rePixiv = regexp.MustCompile(`https://www\.pixiv\.net/`)
 )
 
 func fixLink(link string) (string, bool) {
 	// Ignora já corrigidos
-	if strings.Contains(link, "fixvx.com") || strings.Contains(link, "vxinstagram.com") {
+	if strings.Contains(link, "fixvx.com") || strings.Contains(link, "vxinstagram.com") || strings.Contains(link, "phixiv.net"){
 		return "", false
 	}
 
@@ -385,6 +386,13 @@ func fixLink(link string) (string, bool) {
 		fixed := reInstagramBase.ReplaceAllString(link, "https://www.vxinstagram.com/")
 		fixed = reInstagramClean.ReplaceAllString(fixed, `$1/`)
 		return fixed, true
+	}
+	
+	// Pixiv
+	if strings.Contains(link, "pixiv.net") {
+		fixed := rePixiv.ReplaceAllString(link, "https://www.phixiv.net/")
+		return fixed, true
+		
 	}
 
 	return "", false
