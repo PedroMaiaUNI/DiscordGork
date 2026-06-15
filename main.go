@@ -512,7 +512,7 @@ func main() {
 
 	fmt.Println("Bot online 🚀")
 	go iniciarAgendador(dg)
-	
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
@@ -520,12 +520,31 @@ func main() {
 }
 
 func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-	for _, user := range m.Mentions {
-		if user.ID == s.State.User.ID {
-			return true
+
+	bot_id := s.State.User.ID
+
+	loop := func(m []*discordgo.User, id string) bool {
+		for _, user := range m {
+			if user.ID == id {
+				return true
+			}
+		}
+		return false
+	}
+
+	if cringe := m.WebhookID; cringe != "" {
+		msg, err := s.WebhookMessage(cringe, s.Token, m.ID)
+		if err != nil {
+			log.Println(" valeu laghostin kkkkkkkkkkkkkkkkkkkk")
+		}
+
+		if mentioned := loop(msg.Mentions, bot_id); mentioned {
+			return mentioned
 		}
 	}
-	return false
+
+	mentioned := loop(m.Mentions, bot_id)
+	return mentioned
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {

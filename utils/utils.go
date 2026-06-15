@@ -365,40 +365,40 @@ func Update_Gist(gistID string, filename string, token string, frases []Frase) e
 func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	content := m.Content
 	// Detecta links monitorados
-		if !strings.Contains(content, "https://x.com/") &&
-			!strings.Contains(content, "https://twitter.com/") &&
-			!strings.Contains(content, "https://instagram.com/") &&		
-			!strings.Contains(content, "https://www.instagram.com/p") &&
-		 	!strings.Contains(content, "https://www.instagram.com/reel") &&
-			!strings.Contains(content, "https://www.pixiv.net/") {
-			return
-		}
+	if !strings.Contains(content, "https://x.com/") &&
+		!strings.Contains(content, "https://twitter.com/") &&
+		!strings.Contains(content, "https://instagram.com/") &&
+		!strings.Contains(content, "https://www.instagram.com/p") &&
+		!strings.Contains(content, "https://www.instagram.com/reel") &&
+		!strings.Contains(content, "https://www.pixiv.net/") {
+		return
+	}
 
-		msg := content
+	msg := content
 
-		// Twitter / X
-		if strings.Contains(content, "https://x.com/") {
-			re := regexp.MustCompile(`https://x\.com/`)
-			msg = re.ReplaceAllString(msg, "https://fixvx.com/")
-			
-		} else if strings.Contains(content, "https://twitter.com/") {
-			re := regexp.MustCompile(`https://twitter\.com/`)
-			msg = re.ReplaceAllString(msg, "https://fixvx.com/")
-			
-		} else if strings.Contains(content, "https://www.pixiv.net/"){
-			// Pixiv
-			re := regexp.MustCompile(`https://www\.pixiv\.net/`)
-			msg = re.ReplaceAllString(msg, "https://www.phixiv.net/")
-			
-		} else {
-			// Instagram
-			reBase := regexp.MustCompile(`https://(www\.)?instagram\.com/`)
-			msg = reBase.ReplaceAllString(msg, "https://www.vxinstagram.com/")
+	// Twitter / X
+	if strings.Contains(content, "https://x.com/") {
+		re := regexp.MustCompile(`https://x\.com/`)
+		msg = re.ReplaceAllString(msg, "https://fixvx.com/")
 
-			// Remove parâmetros extras (reel / p)
-			reClean := regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/]+)/?.*`)
-			msg = reClean.ReplaceAllString(msg, `$1/`)
-		}
+	} else if strings.Contains(content, "https://twitter.com/") {
+		re := regexp.MustCompile(`https://twitter\.com/`)
+		msg = re.ReplaceAllString(msg, "https://fixvx.com/")
+
+	} else if strings.Contains(content, "https://www.pixiv.net/") {
+		// Pixiv
+		re := regexp.MustCompile(`https://www\.pixiv\.net/`)
+		msg = re.ReplaceAllString(msg, "https://www.phixiv.net/")
+
+	} else {
+		// Instagram
+		reBase := regexp.MustCompile(`https://(www\.)?instagram\.com/`)
+		msg = reBase.ReplaceAllString(msg, "https://www.vxinstagram.com/")
+
+		// Remove parâmetros extras (reel / p)
+		reClean := regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/]+)/?.*`)
+		msg = reClean.ReplaceAllString(msg, `$1/`)
+	}
 
 	// Suprime embed da mensagem original
 	flags := discordgo.MessageFlagsSuppressEmbeds
@@ -410,7 +410,6 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if err != nil {
 		log.Println("Erro ao suprimir embed:", err)
 	}
-
 
 	_, err = s.ChannelMessageSend(m.ChannelID, msg)
 	if err != nil {
