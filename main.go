@@ -42,9 +42,11 @@ var (
 		"1235684622810222753": true, //ruan
 		"1452723817825964137": true, //gork 2
 		"1126363442652123167": true, //normal dimension
-
+		
 	}
 	gist_carregado bool = true
+	// em ordem: geral, artes, tech
+    webhooks_bridge = []string{"1516166543107428386", "1516175965129277590", "1516139861596176434"}
 )
 
 const (
@@ -52,6 +54,7 @@ const (
 	WORD_COUNTER_PATH  = "word_counter.json"
 	PALAVRA_MONITORADA = "hitler"
 	Tonga              = "918671270885851187"
+	
 )
 
 func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
@@ -549,7 +552,17 @@ func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
-		return
+		// return
+		valid := false
+        for _, wid := range webhooks_bridge {
+            if wid == m.Author.ID {
+                valid = true
+            }
+        }
+
+        if !valid {
+            return
+        }
 	}
 	HandlePalavraMonitorada(s, m, PALAVRA_MONITORADA)
 	utils.MaybeReact(s, m, Emojis)
