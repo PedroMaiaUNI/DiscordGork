@@ -393,10 +393,10 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 	} else {
 		// Instagram
 		reBase := regexp.MustCompile(`https://(www\.)?instagram\.com/`)
-		msg = reBase.ReplaceAllString(msg, "https://www.vxinstagram.com/")
+		msg = reBase.ReplaceAllString(msg, "https://www.kkinstagram.com/")
 
 		// Remove parâmetros extras (reel / p)
-		reClean := regexp.MustCompile(`(https://www\.vxinstagram\.com/(reel|p)/[^/]+)/?.*`)
+		reClean := regexp.MustCompile(`(https://www\.kkinstagram\.com/(reel|p)/[^/]+)/?.*`)
 		msg = reClean.ReplaceAllString(msg, `$1/`)
 	}
 
