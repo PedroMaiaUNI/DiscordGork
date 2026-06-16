@@ -535,17 +535,6 @@ func bot_mencionado(s *discordgo.Session, m *discordgo.MessageCreate) bool {
 		return false
 	}
 
-	if cringe := m.WebhookID; cringe != "" {
-		msg, err := s.WebhookMessage(cringe, s.Token, m.ID)
-		if err != nil {
-			log.Println(" valeu laghostin kkkkkkkkkkkkkkkkkkkk")
-		}
-
-		if mentioned := loop(msg.Mentions, bot_id); mentioned {
-			return mentioned
-		}
-	}
-
 	mentioned := loop(m.Mentions, bot_id)
 	return mentioned
 }
