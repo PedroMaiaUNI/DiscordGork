@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	"golang.org/x/text/unicode/norm"
 	"io"
 	"log"
 	"math/rand"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/unicode/norm"
 )
 
 type WordStat struct {
@@ -370,7 +371,8 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 		!strings.Contains(content, "https://instagram.com/") &&
 		!strings.Contains(content, "https://www.instagram.com/p") &&
 		!strings.Contains(content, "https://www.instagram.com/reel") &&
-		!strings.Contains(content, "https://www.pixiv.net/") {
+		!strings.Contains(content, "https://www.pixiv.net/") &&
+		!strings.Contains(content, "https://www.facebook.com/share/") {
 		return
 	}
 
@@ -390,6 +392,10 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 		re := regexp.MustCompile(`https://www\.pixiv\.net/`)
 		msg = re.ReplaceAllString(msg, "https://www.phixiv.net/")
 
+	} else if strings.Contains(content, "https://www.facebook.com/") { 
+		// Facebook
+		re := regexp.MustCompile(`https://(www\.)?facebook\.com/`)
+		msg = re.ReplaceAllString(msg, "https://facebed.seria.moe/")
 	} else {
 		// Instagram
 		reBase := regexp.MustCompile(`https://(www\.)?instagram\.com/`)
