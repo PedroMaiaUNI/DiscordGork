@@ -392,7 +392,7 @@ func HandleFixEmbeds(s *discordgo.Session, m *discordgo.MessageCreate) {
 		re := regexp.MustCompile(`https://www\.pixiv\.net/`)
 		msg = re.ReplaceAllString(msg, "https://www.phixiv.net/")
 
-	} else if strings.Contains(content, "https://www.facebook.com/") { 
+	} else if strings.Contains(content, "https://www.facebook.com/") {
 		// Facebook
 		re := regexp.MustCompile(`https://(www\.)?facebook\.com/`)
 		msg = re.ReplaceAllString(msg, "https://facebed.seria.moe/")
