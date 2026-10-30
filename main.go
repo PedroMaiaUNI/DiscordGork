@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 	"log"
 	"math/rand"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 
 	//"enconding/json"
 	//"http"
@@ -557,6 +557,45 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	utils.MaybeReact(s, m, Emojis)
 	utils.HandleFixEmbeds(s, m)
 	utils.Handler_ImgSexta(s, m)
+	for _, att := range m.Attachments {
+		if strings.HasSuffix(att.Filename, ".ogg") && att.Waveform != "" {
+
+			s.ChannelMessageSend(m.ChannelID, "🎙️ Mensagem de voz detectada! Baixando em segundo plano...")
+
+			go func(sess *discordgo.Session, url, filename, channelID, messageID string) {
+				pastaDestino := "audios"
+				err := os.MkdirAll(pastaDestino, os.ModePerm)
+				if err != nil {
+					sess.ChannelMessageSend(channelID, "❌ Erro ao criar pasta de áudios.")
+					return
+				}
+
+				// monta o caminho completo do arquivo
+				nomeArquivo := fmt.Sprintf("%s_%s", messageID, filename)
+				caminhoCompleto := filepath.Join(pastaDestino, nomeArquivo)
+
+				// Chama a função passando a url e o caminho do arquivo
+				erro := utils.Baixar_audio(url, caminhoCompleto)
+				if erro != nil {
+					sess.ChannelMessageSend(channelID, "❌ Erro ao baixar o áudio: "+erro.Error())
+					return
+				}
+
+				sess.ChannelMessageSend(channelID, "✍️ Transcrevendo áudio...")
+
+				texto, err := utils.Transcrever(caminhoCompleto)
+				if err != nil {
+					sess.ChannelMessageSend(channelID, "❌ Erro na transcrição: "+err.Error())
+					return
+				}
+
+				// 3. Envia o texto no canal
+				mensagemResposta := fmt.Sprintf("🗣️ **Transcrição:**\n> %s", texto)
+				sess.ChannelMessageSend(channelID, mensagemResposta)
+			}(s, att.URL, att.Filename, m.ChannelID, m.ID)
+		}
+	}
+
 	if m.Author.ID == "271218339311910912" && strings.Contains(m.Content, "mygo") {
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🧩")
 		s.MessageReactionAdd(m.ChannelID, m.Reference().MessageID, "🦖")
