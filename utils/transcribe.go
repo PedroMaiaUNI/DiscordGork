@@ -35,10 +35,7 @@ func Baixar_audio(url string, caminhoArquivo string) error {
 }
 
 func Transcrever(path string) (string, error) {
-	arq_convertido := strings.TrimSuffix(path, filepath.Ext(path)) + ".wav"
-	defer os.Remove(arq_convertido)
-
-	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", arq_convertido)
+	cmd := exec.Command("ffmpeg", "-y", "-i", path, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", path)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("erro ao converter audio para Wav: %v - %s", err, string(output))
 	}
@@ -48,9 +45,10 @@ func Transcrever(path string) (string, error) {
 	cmdWhisper := exec.Command(
 		whisper,
 		"-m", model,
-		"-f", arq_convertido,
+		"-f", path,
 		"-l", "pt", // pt-br
 		"-nt", // (apenas o texto limpo)
+		"-np",
 	)
 	out, err := cmdWhisper.CombinedOutput()
 	if err != nil {

@@ -588,8 +588,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					sess.ChannelMessageSend(channelID, "❌ Erro na transcrição: "+err.Error())
 					return
 				}
+				if len(texto) > 1900 {
+                	texto = texto[:1900] + "... mucho testo (limite de tamanho)"
+            	}
 
-				// 3. Envia o texto no canal
+				// Envia o texto no canal
 				mensagemResposta := fmt.Sprintf("🗣️ **Transcrição:**\n> %s", texto)
 				sess.ChannelMessageSend(channelID, mensagemResposta)
 			}(s, att.URL, att.Filename, m.ChannelID, m.ID)
