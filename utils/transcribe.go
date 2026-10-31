@@ -35,36 +35,36 @@ func Baixar_audio(url string, caminhoArquivo string) error {
 }
 
 func Transcrever(path string) (string, error) {
-	// Cria nome para o WAV temporário
+	
 	arqConvertido := strings.TrimSuffix(path, filepath.Ext(path)) + ".wav"
 	defer os.Remove(arqConvertido) // Remove o .wav ao finalizar
 
-	// 1. Converte Ogg Opus do Discord para WAV PCM 16kHz mono
+	//  Converte OGG Opus do Discord para WAV PCM 16kHz mono
 	cmdFFmpeg := exec.Command("ffmpeg", "-y", "-i", path, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", arqConvertido)
 	if output, err := cmdFFmpeg.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("erro no ffmpeg: %v - %s", err, string(output))
 	}
 
-	// 2. Valida se o WAV foi gerado corretamente
+	
 	info, err := os.Stat(arqConvertido)
 	if err != nil || info.Size() == 0 {
 		return "", fmt.Errorf("falha ao converter áudio: arquivo WAV de tamanho 0")
 	}
 
 	whisper := "./whisper-cli"
-	model := "models/ggml-base.bin"
+	model := "models/ggml-small.bin"
 
-	// 3. Executa o whisper-cli passando o WAV convertido
+	//  whisper-cli
 	cmdWhisper := exec.Command(
 		whisper,
 		"-m", model,
 		"-f", arqConvertido,
 		"-l", "pt",
 		"-nt",
-		"-t", "2", // Limita a 2 threads para estabilidade de memória
+		"-t", "2", 
 	)
 
-	out, err := cmdWhisper.CombinedOutput()
+	out, err := cmdWhisper.Output()
 	if err != nil {
 		return "", fmt.Errorf("erro no whisper: %v - %s", err, string(out))
 	}
@@ -74,7 +74,7 @@ func Transcrever(path string) (string, error) {
 		textoTranscrito = "Não foi possível compreender o áudio."
 	}
 
-	// 4. Apaga o arquivo .ogg original baixado
+	// Apaga o arquivo .ogg original
 	if errRm := os.Remove(path); errRm != nil {
 		fmt.Printf("Aviso: erro ao remover %s: %v\n", path, errRm)
 	}
